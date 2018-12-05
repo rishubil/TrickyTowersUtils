@@ -9,8 +9,9 @@ import requests
 
 pymem.logger.disabled = True
 
-# todo: detect result page
-
+# todo: should detect "game result"  page
+# todo: survival detection is not properly working (it is also on puzzle)
+# todo: some address and name is not same with cheat engine
 
 def get_base_addr(pm, name):
     return pymem.process.module_from_name(pm.process_handle, name).lpBaseOfDll
@@ -44,33 +45,38 @@ def get_username(steamid_map, steamid):
 
 
 def get_memory_data(pm, base_address):
-    is_playing_ptr = follow_module_ptr(pm, 'TrickyTowers.exe', 0x01010BD0, 0x8)
-    is_finished_ptr = follow_module_ptr(pm, 'TrickyTowers.exe', 0x010494D8,
-                                        0x1C, 0x59C, 0x214, 0x48, 0x228)
-    num_of_online_player_ptr = follow_module_ptr(pm, 'mono.dll', 0x001F40AC,
-                                                 0x1A8, 0x24, 0x4C, 0xEC, 0xCC)
-    
-    num_of_race_base_ptr = follow_module_ptr(
-        pm, 'TrickyTowers.exe', 0x010494D8, 0x1C, 0x71C, 0x6F8, 0xC, 0x748)
+    fmp = lambda name, *args: follow_module_ptr(pm, name, *args)
+    fmpt = lambda *args: fmp('TrickyTowers.exe', *args)
+    fmpm = lambda *args: fmp('mono.dll', *args)
 
-    num_of_survival_base_ptr = follow_module_ptr(
-        pm, 'TrickyTowers.exe', 0x01097824, 0x9C, 0x2C4, 0x154, 0x558, 0x628)
+    is_playing_ptr = fmpt(0x01010BD0, 0x8)
+    is_finished_ptr = fmpt(0x010494D8, 0x1C, 0x59C, 0x214, 0x48, 0x228)
+    num_online_player_ptr = fmpm(0x001F40AC, 0x1A8, 0x24, 0x4C, 0xEC, 0xCC)
+    num_race_base_ptr = fmpt(0x010494D8, 0x1C, 0x71C, 0x6F8, 0xC, 0x748)
+    num_survival_base_ptr = fmpt(0x01097824, 0x9C, 0x2C4, 0x154, 0x558, 0x628)
+    player1_steamid_ptr = fmpm(0x0020C574, 0x4, 0x8, 0x1E8, 0x24, 0x48)
+    player2_steamid_ptr = fmpm(0x0020C574, 0x4, 0x8, 0x1E8, 0x24, 0x50)
+    player3_steamid_ptr = fmpm(0x0020C574, 0x4, 0x8, 0x1E8, 0x24, 0x58)
+    player4_steamid_ptr = fmpm(0x0020C574, 0x4, 0x8, 0x1E8, 0x24, 0x60)
 
-    player1_steamid_ptr = follow_module_ptr(pm, 'mono.dll', 0x0020C574, 0x4,
-                                            0x8, 0x1E8, 0x24, 0x48)
-    player2_steamid_ptr = follow_module_ptr(pm, 'mono.dll', 0x0020C574, 0x4,
-                                            0x8, 0x1E8, 0x24, 0x50)
-    player3_steamid_ptr = follow_module_ptr(pm, 'mono.dll', 0x0020C574, 0x4,
-                                            0x8, 0x1E8, 0x24, 0x58)
-    player4_steamid_ptr = follow_module_ptr(pm, 'mono.dll', 0x0020C574, 0x4,
-                                            0x8, 0x1E8, 0x24, 0x60)
+    is_playing = pm.read_short(is_playing_ptr) == 1
+    is_finished = pm.read_short(is_finished_ptr) == 1
+    num_of_online_player = pm.read_short(num_online_player_ptr)
+
+    if not is_playing:
+        game_type = None
+    elif pm.read_short(num_race_base_ptr) > 0:
+        game_type = 'race'
+    elif pm.read_short(num_survival_base_ptr) > 0:
+        game_type = 'survival'
+    else:
+        game_type = 'puzzle'
 
     return {
-        'is_playing': pm.read_short(is_playing_ptr) == 1,
-        'is_finished': pm.read_short(is_finished_ptr) == 1,
-        'num_of_online_player': pm.read_short(num_of_online_player_ptr),
-        'num_of_race_base': pm.read_short(num_of_race_base_ptr),
-        'num_of_survival_base': pm.read_short(num_of_survival_base_ptr),
+        'is_playing': is_playing,
+        'is_finished': is_finished,
+        'num_of_online_player': num_of_online_player,
+        'game_type': game_type,
         'player1_steamid': pm.read_longlong(player1_steamid_ptr),
         'player2_steamid': pm.read_longlong(player2_steamid_ptr),
         'player3_steamid': pm.read_longlong(player3_steamid_ptr),
@@ -95,9 +101,7 @@ if __name__ == '__main__':
                 print(
                     f'num_of_online_player: {memory_data["num_of_online_player"]}'
                 )
-                print(f'num_of_race_base: {memory_data["num_of_race_base"]}')
-                print(
-                    f'num_of_survival_base: {memory_data["num_of_survival_base"]}')
+                print(f'game_type: {memory_data["game_type"]}')
                 print(
                     f'player1_steamid: {get_username(steamid_map, memory_data["player1_steamid"])}'
                 )
