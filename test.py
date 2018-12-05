@@ -49,10 +49,12 @@ def get_memory_data(pm, base_address):
                                         0x1C, 0x59C, 0x214, 0x48, 0x228)
     num_of_online_player_ptr = follow_module_ptr(pm, 'mono.dll', 0x001F40AC,
                                                  0x1A8, 0x24, 0x4C, 0xEC, 0xCC)
+    
     num_of_race_base_ptr = follow_module_ptr(
-        pm, 'TrickyTowers.exe', 0x01097824, 0x9C, 0x2C4, 0x154, 0x558, 0x628)
-    num_of_puzzle_base_ptr = follow_module_ptr(
         pm, 'TrickyTowers.exe', 0x010494D8, 0x1C, 0x71C, 0x6F8, 0xC, 0x748)
+
+    num_of_survival_base_ptr = follow_module_ptr(
+        pm, 'TrickyTowers.exe', 0x01097824, 0x9C, 0x2C4, 0x154, 0x558, 0x628)
 
     player1_steamid_ptr = follow_module_ptr(pm, 'mono.dll', 0x0020C574, 0x4,
                                             0x8, 0x1E8, 0x24, 0x48)
@@ -64,11 +66,11 @@ def get_memory_data(pm, base_address):
                                             0x8, 0x1E8, 0x24, 0x60)
 
     return {
-        'is_playing': pm.read_short(is_playing_ptr),
-        'is_finished': pm.read_short(is_finished_ptr),
+        'is_playing': pm.read_short(is_playing_ptr) == 1,
+        'is_finished': pm.read_short(is_finished_ptr) == 1,
         'num_of_online_player': pm.read_short(num_of_online_player_ptr),
         'num_of_race_base': pm.read_short(num_of_race_base_ptr),
-        'num_of_puzzle_base': pm.read_short(num_of_puzzle_base_ptr),
+        'num_of_survival_base': pm.read_short(num_of_survival_base_ptr),
         'player1_steamid': pm.read_longlong(player1_steamid_ptr),
         'player2_steamid': pm.read_longlong(player2_steamid_ptr),
         'player3_steamid': pm.read_longlong(player3_steamid_ptr),
@@ -95,7 +97,7 @@ if __name__ == '__main__':
                 )
                 print(f'num_of_race_base: {memory_data["num_of_race_base"]}')
                 print(
-                    f'num_of_puzzle_base: {memory_data["num_of_puzzle_base"]}')
+                    f'num_of_survival_base: {memory_data["num_of_survival_base"]}')
                 print(
                     f'player1_steamid: {get_username(steamid_map, memory_data["player1_steamid"])}'
                 )
