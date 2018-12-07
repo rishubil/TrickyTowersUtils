@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "098ac5d102b147c1196b9de1acc9ed4f5a2ecc9371a7e73c510ba38d151d553d"
+            "sha256": "ce9410b839f9c944a83a1359c7025661658972700d6bfefbff726e08cab36dc1"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -114,6 +114,14 @@
             ],
             "version": "==1.1.0"
         },
+        "obs-websocket-py": {
+            "hashes": [
+                "sha256:77a765c1383421a1b218c30553f424700d0624f89af2f6cb16852bd10b64f144",
+                "sha256:d7331ea327642e42f96cc18e7cc0cfb430ddf591fffb2f50d6a3ad60d5911e42"
+            ],
+            "index": "pypi",
+            "version": "==0.4"
+        },
         "packaging": {
             "hashes": [
                 "sha256:0886227f54515e592aaa2e5a553332c73962917f2831f1b0f9b9f4380a4b9807",
@@ -205,6 +213,13 @@
                 "sha256:de9529817c93f27c8ccbfead6985011db27bd0ddfcdb2d86f3f663385c6a9c22"
             ],
             "version": "==1.24.1"
+        },
+        "websocket-client": {
+            "hashes": [
+                "sha256:8c8bf2d4f800c3ed952df206b18c28f7070d9e3dcbd6ca6291127574f57ee786",
+                "sha256:e51562c91ddb8148e791f0155fdb01325d99bb52c4cdbb291aee7a3563fd0849"
+            ],
+            "version": "==0.54.0"
         }
     },
     "develop": {
