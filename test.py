@@ -42,16 +42,17 @@ def log(text):
 
 
 def request_update_member():
-    global ws, lobby
+    global ws, lobby, memory_data
     try:
         if lobby and 'members' in lobby:
-            for i, member in enumerate(lobby['members'], 1):
+            for member in lobby['members']:
+                i = memory_data['players'].index(int(member['id'])) + 1
                 ws.call(
                     requests.SetTextGDIPlusProperties(
                         scene_name='Tricky Towers (Auto, in-game 4p)',
                         source=f'player name {i}',
                         text=f' {member["name"]}'))
-    except e:
+    except Exception as e:
         log(f'[!] {repr(e)}')
 
 
@@ -73,20 +74,21 @@ def request_chnage_scene():
                 ws.call(
                     requests.SetCurrentScene(
                         scene_name=
-                        f'Tricky Towers (Auto, in-game {len(lobby["members"])}p)',
+                        f'Tricky Towers (Auto, in-game {memory_data["num_of_online_player"]}p)',
                     ))
         else:
             should_chage_scoreboard = False
             ws.call(
                 requests.SetCurrentScene(
                     scene_name=f'Tricky Towers (Auto, lobby)', ))
-    except e:
+    except Exception as e:
         log(f'[!] {repr(e)}')
 
 
 def update_memory(data):
     log(f'[>] update_memory({data})')
     request_chnage_scene()
+    request_update_member()
 
 
 def update_lobby(data):
@@ -229,10 +231,12 @@ def get_memory_data(pm, base_address):
         'is_finished': is_finished,
         'num_of_online_player': num_of_online_player,
         'game_type': game_type,
-        'player1_steamid': pm.read_longlong(player1_steamid_ptr),
-        'player2_steamid': pm.read_longlong(player2_steamid_ptr),
-        'player3_steamid': pm.read_longlong(player3_steamid_ptr),
-        'player4_steamid': pm.read_longlong(player4_steamid_ptr),
+        'players': [
+            pm.read_longlong(player1_steamid_ptr),
+            pm.read_longlong(player2_steamid_ptr),
+            pm.read_longlong(player3_steamid_ptr),
+            pm.read_longlong(player4_steamid_ptr),
+        ]
     }
 
 
