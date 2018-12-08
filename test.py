@@ -15,8 +15,8 @@ pymem.logger.disabled = True
 DEBUG = False
 DEBUG = True
 
-DELAY = 0.2
-MAX_COUNTUP = int(3.6 / DELAY)
+DELAY = 0.1
+MAX_COUNTUP = int(3 / DELAY)
 
 scoreboard_countup = 0
 _is_scoreboard_visible = False
@@ -121,7 +121,7 @@ def request_chnage_scene():
 
 def check_scoreboard():
     global _is_scoreboard_visible, scoreboard_countup
-    # log(f'[>] check_scoreboard({_is_scoreboard_visible}, {scoreboard_countup})')
+    log(f'[>] check_scoreboard({_is_scoreboard_visible}, {scoreboard_countup})')
     if not is_finished():
         _is_scoreboard_visible = False
         scoreboard_countup = 0
