@@ -1,37 +1,29 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import tail
-import re
 import sys
 import os
 import time
 import pymem
 import untangle
+import pprint
 from obswebsocket import obsws, requests
+import requests as rq
 
 pymem.logger.disabled = True
 
 DEBUG = False
 DEBUG = True
 
-STATE_NORMAL = 1
-STATE_PARSING_LOBBY = 2
-state = STATE_NORMAL
+DELAY = 0.2
+MAX_COUNTUP = int(3.6 / DELAY)
 
-lobby_number_re = re.compile(r'^Lobby (\d+) updated:$', flags=re.MULTILINE)
-lobby_member_re = re.compile(
-    r'^\t(.*) \((\d+)\)(?: \[(SELF)\])?(?: \[(OWNER)\])?$', flags=re.MULTILINE)
-lobby_attr_re = re.compile(r'^\t(.*): (.*)$', flags=re.MULTILINE)
-level_id_re = re.compile(r'^levelId: (.*)$', flags=re.MULTILINE)
-
-lobby_string = ''
-lobby = None
-
-level_id = None
-should_chage_scoreboard = False
+scoreboard_countup = 0
+_is_scoreboard_visible = False
 
 memory_data = None
+
+member_map = {}
 
 ws = obsws('localhost', 4444, 'temptemp')
 
@@ -41,142 +33,114 @@ def log(text):
         print(text)
 
 
+def num_of_online_player():
+    global memory_data
+    return memory_data['num_of_online_player']
+
+
+def is_online():
+    return num_of_online_player() > 0
+
+
+def is_playing():
+    global memory_data
+    return memory_data['is_playing']
+
+
+def is_finished():
+    global memory_data
+    return memory_data['is_finished']
+
+
+def is_scoreboard_visible():
+    global _is_scoreboard_visible
+    return _is_scoreboard_visible
+
+
+def obs_update_player(i):
+    global ws, memory_data
+    ws.call(
+        requests.SetTextGDIPlusProperties(
+            scene_name='Tricky Towers (Auto, in-game 4p)',
+            source=f'player name {i + 1}',
+            text=f' {get_username(memory_data["players"][i])}'))
+
+
+def obs_show_scoreboard():
+    global ws
+    ws.call(
+        requests.SetCurrentScene(
+            scene_name=f'Tricky Towers (Auto, scoreboard)', ))
+
+
+def obs_show_username():
+    global ws, memory_data
+    ws.call(
+        requests.SetCurrentScene(
+            scene_name=
+            f'Tricky Towers (Auto, in-game {num_of_online_player()}p)', ))
+
+
+def obs_show_lobby():
+    global ws
+    ws.call(
+        requests.SetCurrentScene(scene_name=f'Tricky Towers (Auto, lobby)', ))
+
+
+def get_username(steam_id):
+    global member_map
+    if steam_id not in member_map:
+        user_xml = rq.get(
+            f'https://steamcommunity.com/profiles/{steam_id}/?xml=1').text
+        user_info = untangle.parse(user_xml)
+        member_map[steam_id] = user_info.profile.steamID.cdata
+    return member_map[steam_id]
+
+
 def request_update_member():
-    global ws, lobby, memory_data
     try:
-        if lobby and 'members' in lobby:
-            for member in lobby['members']:
-                i = memory_data['players'].index(int(member['id'])) + 1
-                ws.call(
-                    requests.SetTextGDIPlusProperties(
-                        scene_name='Tricky Towers (Auto, in-game 4p)',
-                        source=f'player name {i}',
-                        text=f' {member["name"]}'))
+        if is_online() and (is_scoreboard_visible() or not is_playing()):
+            for i in range(num_of_online_player()):
+                obs_update_player(i)
     except Exception as e:
         log(f'[!] {repr(e)}')
 
 
 def request_chnage_scene():
-    global ws, lobby, memory_data, should_chage_scoreboard
     try:
-        if lobby and 'in_game' in lobby and lobby[
-                'in_game'] == 'TRUE' and memory_data and 'is_playing' in memory_data and memory_data[
-                    'is_playing']:
-            if memory_data and 'is_finished' in memory_data and memory_data[
-                    'is_finished'] and should_chage_scoreboard:
-                should_chage_scoreboard = False
-                ws.call(
-                    requests.SetCurrentScene(
-                        scene_name=
-                        f'Tricky Towers (Auto, scoreboard)',
-                    ))
+        if is_online() and is_playing():
+            if is_finished() and is_scoreboard_visible():
+                obs_show_scoreboard()
             else:
-                ws.call(
-                    requests.SetCurrentScene(
-                        scene_name=
-                        f'Tricky Towers (Auto, in-game {memory_data["num_of_online_player"]}p)',
-                    ))
+                obs_show_username()
         else:
-            should_chage_scoreboard = False
-            ws.call(
-                requests.SetCurrentScene(
-                    scene_name=f'Tricky Towers (Auto, lobby)', ))
+            obs_show_lobby()
     except Exception as e:
         log(f'[!] {repr(e)}')
 
 
+def check_scoreboard():
+    global _is_scoreboard_visible, scoreboard_countup
+    # log(f'[>] check_scoreboard({_is_scoreboard_visible}, {scoreboard_countup})')
+    if not is_finished():
+        _is_scoreboard_visible = False
+        scoreboard_countup = 0
+        request_chnage_scene()
+        return
+    if is_scoreboard_visible():
+        return
+    if scoreboard_countup < MAX_COUNTUP:
+        scoreboard_countup += 1
+        return
+    scoreboard_countup = 0
+    _is_scoreboard_visible = True
+    request_chnage_scene()
+
+
 def update_memory(data):
-    log(f'[>] update_memory({data})')
+    log(f'[>] update_memory({pprint.pformat(data)})')
     request_chnage_scene()
     request_update_member()
-
-
-def update_lobby(data):
-    log(f'[>] update_lobby({data})')
-    request_update_member()
-    request_chnage_scene()
-
-
-def update_level_id(data):
-    log(f'[>] update_level_id({data})')
-    global should_chage_scoreboard
-    should_chage_scoreboard = True
-    request_chnage_scene()
-
-
-def detect_level_id(line):
-    # log(f'[>] detect_level_id("{line.rstrip()}")')
-    global level_id
-    m = level_id_re.match(line)
-    if not m:
-        return False
-
-    local_level_id = m.group(1)
-    if local_level_id != level_id:
-        level_id = local_level_id
-        update_level_id(level_id)
-
-    return True
-
-
-def detect_lobby(line):
-    # log(f'[>] detect_lobby("{line.rstrip()}")')
-    global state, lobby_string
-    m = lobby_number_re.match(line)
-    if not m:
-        return False
-    state = STATE_PARSING_LOBBY
-    lobby_string += line
-    return True
-
-
-def parse_lobby():
-    # log(f'[>] parse_lobby()')
-    global state, lobby_string, lobby
-
-    lobby_number = lobby_number_re.findall(lobby_string)[0]
-    lobby_members = lobby_member_re.findall(lobby_string)
-    lobby_attrs = lobby_attr_re.findall(lobby_string)
-
-    local_lobby = {
-        'id':
-        lobby_number,
-        'members': [{
-            'id': member[1],
-            'name': member[0],
-            'is_self': member[2] == 'SELF',
-            'is_owner': member[2] == 'OWNER' or member[3] == 'OWNER',
-        } for member in lobby_members]
-    }
-    for attr in lobby_attrs:
-        local_lobby[attr[0].lower()] = attr[1]
-
-    if local_lobby != lobby:
-        lobby = local_lobby
-        update_lobby(lobby)
-
-    lobby_string = ''
-    state = STATE_NORMAL
-
-
-def read_lobby(line):
-    # log(f'[>] read_lobby("{line.rstrip()}")')
-    global lobby_string
-    if line.strip():
-        lobby_string += line
-        return
-    parse_lobby()
-
-
-def parse_log(line):
-    if state == STATE_NORMAL:
-        if detect_lobby(line):
-            return
-        if detect_level_id(line):
-            return
-    elif state == STATE_PARSING_LOBBY:
-        read_lobby(line)
-        return
 
 
 def get_base_addr(pm, name):
@@ -227,10 +191,14 @@ def get_memory_data(pm, base_address):
         game_type = 'unknown'
 
     return {
-        'is_playing': is_playing,
-        'is_finished': is_finished,
-        'num_of_online_player': num_of_online_player,
-        'game_type': game_type,
+        'is_playing':
+        is_playing,
+        'is_finished':
+        is_finished,
+        'num_of_online_player':
+        num_of_online_player,
+        'game_type':
+        game_type,
         'players': [
             pm.read_longlong(player1_steamid_ptr),
             pm.read_longlong(player2_steamid_ptr),
@@ -241,39 +209,26 @@ def get_memory_data(pm, base_address):
 
 
 if __name__ == '__main__':
-    t = tail.Tail(
-        'C:\Program Files (x86)\Steam\steamapps\common\Tricky Towers\TrickyTowers_Data\output_log.txt'
-    )
-    t.register_callback(parse_log)
     ws.connect()
     while True:
-        time.sleep(0.2)
-        with open(t.tailed_file, encoding='utf-8') as file_:
-            # Go to the end of file
-            file_.seek(0, 2)
-            try:
-                pm = pymem.Pymem('TrickyTowers.exe')
-                base_address = pm.process_base.lpBaseOfDll
-                while True:
-                    local_memory_data = get_memory_data(
-                        pm, pm.process_base.lpBaseOfDll)
-                    if local_memory_data != memory_data:
-                        memory_data = local_memory_data
-                        update_memory(memory_data)
+        time.sleep(DELAY)
+        try:
+            pm = pymem.Pymem('TrickyTowers.exe')
+            base_address = pm.process_base.lpBaseOfDll
+            while True:
+                time.sleep(DELAY)
+                local_memory_data = get_memory_data(
+                    pm, pm.process_base.lpBaseOfDll)
+                if local_memory_data != memory_data:
+                    memory_data = local_memory_data
+                    update_memory(memory_data)
+                check_scoreboard()
 
-                    curr_position = file_.tell()
-                    line = file_.readline()
-                    if not line:
-                        file_.seek(curr_position)
-                        time.sleep(0.2)
-                    else:
-                        t.callback(line)
-
-            except pymem.exception.MemoryReadError as e:
-                print('[!] Tricky Towers is may not running')
-            except pymem.exception.ProcessNotFound as e:
-                print('[!] Tricky Towers is not running')
-            except pymem.exception.WinAPIError as e:
-                print('[!] Tricky Towers is may not running')
-            except pymem.exception.ProcessError as e:
-                print('[!] Tricky Towers is seems to opening now')
+        except pymem.exception.MemoryReadError as e:
+            print('[!] Tricky Towers is may not running')
+        except pymem.exception.ProcessNotFound as e:
+            print('[!] Tricky Towers is not running')
+        except pymem.exception.WinAPIError as e:
+            print('[!] Tricky Towers is may not running')
+        except pymem.exception.ProcessError as e:
+            print('[!] Tricky Towers is seems to opening now')
