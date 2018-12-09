@@ -21,3 +21,7 @@ Copy `config(example).ini` to `config.ini` and edit it.
 ```
 pipenv run obsscript
 ```
+
+## License
+
+MIT
