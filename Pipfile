@@ -12,6 +12,10 @@ pymem = "*"
 requests = "*"
 untangle = "*"
 obs-websocket-py = "*"
+pywin32 = "*"
 
 [requires]
 python_version = "3.7"
+
+[scripts]
+obsscript = "python tricky_towers_util.py"
