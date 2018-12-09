@@ -1,22 +1,22 @@
 Tricky Towers Utils
----
+===================
 
-# Requirements
+## Requirements
 
 Git, Python 3.7 and Pipenv
 
-# Installation
+## Installation
 
 ```
 git clone https://github.com/rishubil/TrickyTowersUtils.git
 pipenv install
 ```
 
-# Configuration
+## Configuration
 
 Copy `config(example).ini` to `config.ini` and edit it.
 
-# Run
+## Run
 
 ```
 pipenv run obsscript
