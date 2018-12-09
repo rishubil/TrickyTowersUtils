@@ -7,25 +7,23 @@ import time
 import pymem
 import untangle
 import pprint
+import traceback
 from obswebsocket import obsws, requests
 import requests as rq
+import configparser
 
 pymem.logger.disabled = True
 
 DEBUG = False
-DEBUG = True
-
 DELAY = 0.1
 MAX_COUNTUP = int(3 / DELAY)
 
 scoreboard_countup = 0
 _is_scoreboard_visible = False
-
 memory_data = None
-
 member_map = {}
-
-ws = obsws('localhost', 4444, 'temptemp')
+ws = None
+config = configparser.ConfigParser()
 
 
 def log(text):
@@ -57,38 +55,53 @@ def is_scoreboard_visible():
     return _is_scoreboard_visible
 
 
+def get_obs_config(name):
+    global config
+    return config['OBS'][name]
+
+
+def get_scene_config(name):
+    global config
+    return config['SCENE'][name]
+
+
+def get_text_config(name):
+    global config
+    return config['TEXT'][name]
+
+
 def obs_update_player(i):
     global ws, memory_data
     ws.call(
         requests.SetTextGDIPlusProperties(
-            scene_name='Tricky Towers (Auto, in-game 4p)',
-            source=f'player name {i + 1}',
+            scene_name=get_scene_config('play').format(number=4),
+            source=get_text_config('player').format(number=i + 1),
             text=f' {get_username(memory_data["players"][i])}'))
 
 
 def obs_show_scoreboard():
     global ws
     ws.call(
-        requests.SetCurrentScene(
-            scene_name=f'Tricky Towers (Auto, scoreboard)', ))
+        requests.SetCurrentScene(scene_name=get_scene_config('scoreboard'), ))
 
 
 def obs_show_username():
     global ws, memory_data
     ws.call(
         requests.SetCurrentScene(
-            scene_name=
-            f'Tricky Towers (Auto, in-game {num_of_online_player()}p)', ))
+            scene_name=get_scene_config('play').format(
+                number=num_of_online_player()), ))
 
 
 def obs_show_lobby():
     global ws
-    ws.call(
-        requests.SetCurrentScene(scene_name=f'Tricky Towers (Auto, lobby)', ))
+    ws.call(requests.SetCurrentScene(scene_name=get_scene_config('lobby'), ))
 
 
 def get_username(steam_id):
     global member_map
+    if steam_id <= 0:
+        return ''
     if steam_id not in member_map:
         user_xml = rq.get(
             f'https://steamcommunity.com/profiles/{steam_id}/?xml=1').text
@@ -104,6 +117,7 @@ def request_update_member():
                 obs_update_player(i)
     except Exception as e:
         log(f'[!] {repr(e)}')
+        log(traceback.format_exc())
 
 
 def request_chnage_scene():
@@ -117,11 +131,12 @@ def request_chnage_scene():
             obs_show_lobby()
     except Exception as e:
         log(f'[!] {repr(e)}')
+        log(traceback.format_exc())
 
 
 def check_scoreboard():
     global _is_scoreboard_visible, scoreboard_countup
-    log(f'[>] check_scoreboard({_is_scoreboard_visible}, {scoreboard_countup})')
+    # log(f'[>] check_scoreboard({_is_scoreboard_visible}, {scoreboard_countup})')
     if not is_finished():
         _is_scoreboard_visible = False
         scoreboard_countup = 0
@@ -137,8 +152,21 @@ def check_scoreboard():
     request_chnage_scene()
 
 
+def print_memory(data):
+    print('---')
+    print(f'게임 타입: {data["game_type"]}')
+    print(f'현재 게임상태: {"게임중" if data["is_playing"] else "게임중이 아님"}')
+    print(f'레벨 상태: {"종료됨" if data["is_finished"] else "종료되지 않음"}')
+    print(f'온라인 플레이: {"예" if data["num_of_online_player"] > 0 else "아니오"}')
+    print(f'온라인 플레이어 수: {data["num_of_online_player"]}')
+    print(
+        f'플레이어명: {[get_username(data["players"][x]) for x in range(data["num_of_online_player"])]}'
+    )
+
+
 def update_memory(data):
     log(f'[>] update_memory({pprint.pformat(data)})')
+    print_memory(data)
     request_chnage_scene()
     request_update_member()
 
@@ -163,6 +191,20 @@ def follow_module_ptr(pm, module_name, *args):
     return follow_ptr(pm, get_base_addr(pm, module_name), *args)
 
 
+def read_short(pm, ptr):
+    try:
+        return pm.read_short(ptr)
+    except pymem.exception.MemoryReadError as e:
+        return -1
+
+
+def read_longlong(pm, ptr):
+    try:
+        return pm.read_longlong(ptr)
+    except pymem.exception.MemoryReadError as e:
+        return -1
+
+
 def get_memory_data(pm, base_address):
     fmp = lambda name, *args: follow_module_ptr(pm, name, *args)
     fmpt = lambda *args: fmp('TrickyTowers.exe', *args)
@@ -177,15 +219,15 @@ def get_memory_data(pm, base_address):
     player3_steamid_ptr = fmpm(0x0020C574, 0x4, 0x8, 0x1E8, 0x24, 0x58)
     player4_steamid_ptr = fmpm(0x0020C574, 0x4, 0x8, 0x1E8, 0x24, 0x60)
 
-    is_playing = pm.read_short(is_playing_ptr) == 1
-    is_finished = pm.read_short(is_finished_ptr) == 1
-    num_of_online_player = pm.read_short(num_online_player_ptr)
+    is_playing = read_short(pm, is_playing_ptr) == 1
+    is_finished = read_short(pm, is_finished_ptr) == 1
+    num_of_online_player = read_short(pm, num_online_player_ptr)
 
     if not is_playing:
         game_type = None
-    elif pm.read_short(num_race_base_ptr) > 0:
+    elif read_short(pm, num_race_base_ptr) > 0:
         game_type = 'race'
-    # elif pm.read_short(num_survival_base_ptr) > 0:
+    # elif read_short(pm, num_survival_base_ptr) > 0:
     #     game_type = 'survival'
     else:
         game_type = 'unknown'
@@ -200,16 +242,33 @@ def get_memory_data(pm, base_address):
         'game_type':
         game_type,
         'players': [
-            pm.read_longlong(player1_steamid_ptr),
-            pm.read_longlong(player2_steamid_ptr),
-            pm.read_longlong(player3_steamid_ptr),
-            pm.read_longlong(player4_steamid_ptr),
+            read_longlong(pm, player1_steamid_ptr),
+            read_longlong(pm, player2_steamid_ptr),
+            read_longlong(pm, player3_steamid_ptr),
+            read_longlong(pm, player4_steamid_ptr),
         ]
     }
 
 
 if __name__ == '__main__':
-    ws.connect()
+    try:
+        config = configparser.ConfigParser()
+        config.read('config.ini')
+        ws = obsws(
+            get_obs_config('host'), int(get_obs_config('port')),
+            get_obs_config('password'))
+    except Exception as e:
+        print(f'[!] Cannot get configuration: {repr(e)}')
+        log(traceback.format_exc())
+        sys.exit(-1)
+
+    try:
+        ws.connect()
+    except Exception as e:
+        print(f'[!] Cannot connect to OBS: {repr(e)}')
+        log(traceback.format_exc())
+        sys.exit(-1)
+
     while True:
         time.sleep(DELAY)
         try:
@@ -225,10 +284,16 @@ if __name__ == '__main__':
                 check_scoreboard()
 
         except pymem.exception.MemoryReadError as e:
-            print('[!] Tricky Towers is may not running')
+            print(f'[!] Tricky Towers is may not running: {repr(e)}')
+            log(traceback.format_exc())
         except pymem.exception.ProcessNotFound as e:
-            print('[!] Tricky Towers is not running')
+            print(f'[!] Tricky Towers is not running: {repr(e)}')
+            log(traceback.format_exc())
         except pymem.exception.WinAPIError as e:
-            print('[!] Tricky Towers is may not running')
+            print(f'[!] Tricky Towers is may not running: {repr(e)}')
+            log(traceback.format_exc())
         except pymem.exception.ProcessError as e:
-            print('[!] Tricky Towers is seems to opening now')
+            print(f'[!] Tricky Towers is seems to opening now: {repr(e)}')
+            log(traceback.format_exc())
+        except KeyboardInterrupt as e:
+            sys.exit(0)

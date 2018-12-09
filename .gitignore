@@ -2,3 +2,4 @@ scan/
 *.CT
 .vscode/
 __pycache__/
+config.ini
