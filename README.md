@@ -5,12 +5,16 @@ Tricky Towers Utils
 
 Git, Python 3.7 and Pipenv
 
-# Install
+# Installation
 
 ```
 git clone https://github.com/rishubil/TrickyTowersUtils.git
 pipenv install
 ```
+
+# Configuration
+
+Copy `config(example).ini` to `config.ini` and edit it.
 
 # Run
 
