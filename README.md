@@ -9,6 +9,7 @@ Git, Python 3.7 and Pipenv
 
 ```
 git clone https://github.com/rishubil/TrickyTowersUtils.git
+cd TrickyTowersUtils
 pipenv install
 ```
 
