@@ -635,13 +635,13 @@ class WorldModel(SelectModel):
             c : <name>k__BackingField (type: System.String)
             10 : <resourceName>k__BackingField (type: System.String)
     1718c818 : WorldModel
-			static fields
-				0 : ANY (type: WorldModel)
-			fields
-				14 : type (type: System.String)
-				18 : <gameModes>k__BackingField (type: System.Collections.Generic.List<SelectModel>)
-				1c : <medalCost>k__BackingField (type: System.Int32)
-				20 : unlocked (type: System.Boolean)
+        static fields
+            0 : ANY (type: WorldModel)
+        fields
+            14 : type (type: System.String)
+            18 : <gameModes>k__BackingField (type: System.Collections.Generic.List<SelectModel>)
+            1c : <medalCost>k__BackingField (type: System.Int32)
+            20 : unlocked (type: System.Boolean)
     '''
 
     def __init__(self, pm, ptr):
@@ -901,11 +901,10 @@ class CupMatchFlowController(AbstractMultiplayerGameTypeFlowController):
             self._friendsMatch = None
             self._overtime = None
             return
-        self._resultsByPlayer = GenericDictionary(
-            pm, ptr + 0x28,
-            lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)),
-            lambda inner_ptr: GenericList(pm, pm.read_int(inner_ptr), lambda inner_ptr: PlayerMatchResult(pm, pm.read_int(inner_ptr))),
-            100) # max for test
+        # self._resultsByPlayer = GenericDictionary(
+        #     pm, ptr + 0x28,
+        #     lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)),
+        #     lambda inner_ptr: GenericList(pm, pm.read_int(inner_ptr), lambda inner_ptr: PlayerMatchResult(pm, pm.read_int(inner_ptr))))
         self._controllerIds = GenericList(
             pm, pm.read_int(ptr + 0x2c),
             lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)))
