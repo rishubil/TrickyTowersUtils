@@ -113,22 +113,25 @@ class GenericDictionary(DataModel):
 				30 : generation (type: System.Int32)
     '''
 
-    def __init__(self, pm, ptr, key_type_init, value_type_init):
+    def __init__(self, pm, ptr, key_type_init, value_type_init, maybe_max=None):
         super().__init__(pm, ptr)
         if ptr == 0x0:
             self.keySlots = None
             self.valueSlots = None
             self.touchedSlots = 0
+            self.maybe_max = 0
             return
         self.keySlots = Array(pm, pm.read_int(ptr + 0x10), key_type_init)
         self.valueSlots = Array(pm, pm.read_int(ptr + 0x14), value_type_init)
         self.touchedSlots = pm.read_int(ptr + 0x18)
+        self.maybe_max = maybe_max
 
     @property
     def value(self):
         result = {}
         _next = 0
-        while (_next < self.touchedSlots):
+        _max = self.maybe_max if self.maybe_max else self.touchedSlots
+        while (_next < _max):
             cur = _next
             try:
                 key = self.keySlots.get(cur)
@@ -470,9 +473,9 @@ class GameTypeModel(SelectModel):
             self.type = None
             self.startState = None
             return
-        self.worlds = GenericList(
-            pm, pm.read_int(ptr + 0x14),
-            lambda inner_ptr: SelectModel(pm, pm.read_int(inner_ptr)))
+        # self.worlds = GenericList(
+        #     pm, pm.read_int(ptr + 0x14),
+        #     lambda inner_ptr: SelectModel(pm, pm.read_int(inner_ptr)))
         self.type = SystemString(pm, pm.read_int(ptr + 0x18))
         self.startState = SystemString(pm, pm.read_int(ptr + 0x1c))
 
@@ -624,6 +627,195 @@ class PlayerMatchResult(BaseModel):
         self.difficulty = SystemString(pm, pm.read_int(ptr + 0xc))
 
 
+class WorldModel(SelectModel):
+    '''
+    66cb3d8 : SelectModel
+        fields
+            8 : <id>k__BackingField (type: System.String)
+            c : <name>k__BackingField (type: System.String)
+            10 : <resourceName>k__BackingField (type: System.String)
+    1718c818 : WorldModel
+			static fields
+				0 : ANY (type: WorldModel)
+			fields
+				14 : type (type: System.String)
+				18 : <gameModes>k__BackingField (type: System.Collections.Generic.List<SelectModel>)
+				1c : <medalCost>k__BackingField (type: System.Int32)
+				20 : unlocked (type: System.Boolean)
+    '''
+
+    def __init__(self, pm, ptr):
+        super().__init__(pm, ptr)
+        if ptr == 0x0:
+            self.type = None
+            self.gameModes = None
+            self.medalCost = None
+            self.unlocked = None
+            return
+        self.type = SystemString(pm, pm.read_int(ptr + 0x14))
+        # self.gameModes = GenericList(
+        #     pm, pm.read_int(ptr + 0x18),
+        #     lambda inner_ptr: SelectModel(pm, pm.read_int(inner_ptr)))
+        self.medalCost = pm.read_int(ptr + 0x1c)
+        self.unlocked = pm.read_bytes(ptr + 0x20, 1) == '\x01'
+
+class GameModeModel(SelectModel):
+    '''
+    66cb3d8 : SelectModel
+        fields
+            8 : <id>k__BackingField (type: System.String)
+            c : <name>k__BackingField (type: System.String)
+            10 : <resourceName>k__BackingField (type: System.String)
+    1718c6e0 : GameModeModel
+        fields
+            14 : <gameModeFactory>k__BackingField (type: AbstractGameModeFactory)
+            18 : <explanationId>k__BackingField (type: System.String)
+            1c : <type>k__BackingField (type: System.String)
+            20 : parentWorld (type: WorldModel)
+            24 : menuBackgroundFactory (type: BackgroundsFactory)
+    '''
+
+    TYPE_MULTIPLAYER_RACE_EASY = 'MULTIPLAYER_RACE_EASY'
+    TYPE_MULTIPLAYER_RACE_NORMAL = 'MULTIPLAYER_RACE_NORMAL'
+    TYPE_MULTIPLAYER_RACE_PRO = 'MULTIPLAYER_RACE_PRO'
+    TYPE_MULTIPLAYER_SURVIVAL_EASY = 'MULTIPLAYER_SURVIVAL_EASY'
+    TYPE_MULTIPLAYER_SURVIVAL_NORMAL = 'MULTIPLAYER_SURVIVAL_NORMAL'
+    TYPE_MULTIPLAYER_SURVIVAL_PRO = 'MULTIPLAYER_SURVIVAL_PRO'
+    TYPE_MULTIPLAYER_PUZZLE_EASY = 'MULTIPLAYER_PUZZLE_EASY'
+    TYPE_MULTIPLAYER_PUZZLE_NORMAL = 'MULTIPLAYER_PUZZLE_NORMAL'
+    TYPE_MULTIPLAYER_PUZZLE_PRO = 'MULTIPLAYER_PUZZLE_PRO'
+
+    def __init__(self, pm, ptr):
+        super().__init__(pm, ptr)
+        if ptr == 0x0:
+            self.explanationId = None
+            self.type = None
+            self.parentWorld = None
+            return
+        self.explanationId = SystemString(pm, pm.read_int(ptr + 0x18))
+        self.type = SystemString(pm, pm.read_int(ptr + 0x1c))
+        # self.parentWorld = WorldModel(pm, pm.read_int(ptr + 0x20))
+
+
+class NetPlayer(BaseModel):
+    '''
+    17030f40 : NetPlayer
+        static fields
+            0 : create (type: System.Action<NetPlayer>)
+            4 : destroy (type: System.Action<NetPlayer>)
+            8 : players (type: System.Collections.Generic.List<NetPlayer>)
+            c : _netIdPlayerIds (type: System.Collections.Generic.Dictionary<System.UInt32,System.String>)
+            10 : kCmdCmd_SpawnResource (type: System.Int32)
+            14 : kCmdCmd_SpawnTowerPiece (type: System.Int32)
+            18 : kCmdCmd_SetReady (type: System.Int32)
+            1c : kCmdCmd_SetStatus (type: System.Int32)
+            20 : kCmdCmd_SetUserName (type: System.Int32)
+            24 : kCmdCmd_SetWizardId (type: System.Int32)
+            28 : kCmdCmd_SetBrickPackId (type: System.Int32)
+            2c : kCmdCmd_SetEloScore (type: System.Int32)
+            30 : kCmdCmd_SetLevel (type: System.Int32)
+            34 : kCmdCmd_SetSteamId (type: System.Int32)
+        fields
+            1c : statusChange (type: System.Action)
+            20 : usernameChange (type: System.Action)
+            24 : levelChanged (type: System.Action)
+            28 : wizardIdChange (type: System.Action)
+            2c : brickPackIdChange (type: System.Action)
+            30 : steamIdChanged (type: System.Action)
+            34 : objectSpawn (type: System.Action<NetPlayer,UnityEngine.GameObject,System.String>)
+            38 : towerPieceSpawn (type: System.Action<NetPlayer,System.String,UnityEngine.Vector3>)
+            3c : _id (type: System.String)
+            4c : <destroying>k__BackingField (type: System.Boolean)
+            50 : numActionsLastGame (type: System.Int32)
+            40 : _user (type: IUser) -> PCSteamUser
+            44 : _username (type: System.String)
+            54 : _status (type: System.Int32)
+            58 : _wizardId (type: System.Int32)
+            48 : _brickPackId (type: System.String)
+            5c : _level (type: System.Int32)
+            60 : _steamId (type: System.UInt64)
+            68 : _eloScore (type: System.Int32)
+    '''
+
+    def __init__(self, pm, ptr):
+        super().__init__(pm, ptr)
+        if ptr == 0x0:
+            self._id = None
+            self.destroying = None
+            self.numActionsLastGame = None
+            self._user = None
+            self._username = None
+            self._status = None
+            self._wizardId = None
+            self._brickPackId = None
+            self._level = None
+            self._steamId = None
+            self._eloScore = None
+            return
+        self._id = SystemString(pm, pm.read_int(ptr + 0x3c))
+        self.destroying = pm.read_bytes(ptr + 0x4c, 1) == '\x01'
+        self.numActionsLastGame = pm.read_int(ptr + 0x50)
+        self._user = PCSteamUser(pm, pm.read_int(ptr + 0x40))
+        self._username = SystemString(pm, pm.read_int(ptr + 0x44))
+        self._status = pm.read_int(ptr + 0x54)
+        self._wizardId = pm.read_int(ptr + 0x58)
+        self._brickPackId = SystemString(pm, pm.read_int(ptr + 0x48))
+        self._level = pm.read_int(ptr + 0x5c)
+        self._steamId = pm.read_ulonglong(ptr + 0x60)
+        self._eloScore = pm.read_int(ptr + 0x68)
+
+class NetPlayerAtStartup(BaseModel):
+    '''
+    171a7a58 : NetPlayerAtStartup
+        fields
+            8 : <netPlayer>k__BackingField (type: NetPlayer)
+            c : <username>k__BackingField (type: System.String)
+            14 : <wizardId>k__BackingField (type: System.Int32)
+            18 : <level>k__BackingField (type: System.Int32)
+            1c : <eloScore>k__BackingField (type: System.Int32)
+            10 : <id>k__BackingField (type: System.String)
+            20 : <steamId>k__BackingField (type: System.UInt64)
+    '''
+
+    def __init__(self, pm, ptr):
+        super().__init__(pm, ptr)
+        if ptr == 0x0:
+            self.netPlayer = None
+            self.username = None
+            self.wizardId = None
+            self.level = None
+            self.eloScore = None
+            self.id = None
+            self.steamId = None
+            return
+        self.netPlayer = NetPlayer(pm, pm.read_int(ptr + 0x8))
+        self.username = SystemString(pm, pm.read_int(ptr + 0xc))
+        self.wizardId = pm.read_int(ptr + 0x14)
+        self.level = pm.read_int(ptr + 0x18)
+        self.eloScore = pm.read_int(ptr + 0x1c)
+        self.id = SystemString(pm, pm.read_int(ptr + 0x10))
+        self.steamId = pm.read_ulonglong(ptr + 0x20)
+
+class PlayerRankStruct(BaseModel):
+    '''
+    17197c88 : PlayerRankStruct
+        fields
+            8 : player (type: NetPlayer)
+            c : rank (type: System.Int32)
+            10 : experience (type: System.Int32)
+    '''
+
+    def __init__(self, pm, ptr):
+        super().__init__(pm, ptr)
+        if ptr == 0x0:
+            self.player = None
+            self.rank = None
+            self.experience = None
+            return
+        self.player = NetPlayer(pm, pm.read_int(ptr + 0x8))
+        self.rank = pm.read_int(ptr + 0xc)
+        self.experience = pm.read_int(ptr + 0x10)
+
 class AbstractMultiplayerGameTypeFlowController(BaseModel):
     '''
     1716f6e0 : AbstractGameTypeFlowController
@@ -712,7 +904,8 @@ class CupMatchFlowController(AbstractMultiplayerGameTypeFlowController):
         self._resultsByPlayer = GenericDictionary(
             pm, ptr + 0x28,
             lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)),
-            lambda inner_ptr: GenericList(pm, pm.read_int(inner_ptr), lambda inner_ptr: PlayerMatchResult(pm, pm.read_int(inner_ptr))))
+            lambda inner_ptr: GenericList(pm, pm.read_int(inner_ptr), lambda inner_ptr: PlayerMatchResult(pm, pm.read_int(inner_ptr))),
+            100) # max for test
         self._controllerIds = GenericList(
             pm, pm.read_int(ptr + 0x2c),
             lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)))
@@ -726,12 +919,12 @@ class CupMatchFlowController(AbstractMultiplayerGameTypeFlowController):
         # self._winningGameController = AbstractGameController(pm, pm.read_int(ptr + 0x40))
         # self._gameModes = GenericList(pm, pm.read_int(ptr + 0x44), lambda inner_ptr: GameModeModel(pm, pm.read_int(inner_ptr)))
         self._cupType = SystemString(pm, pm.read_int(ptr + 0x48))
-        # self._netPlayersStartup = GenericList(pm, pm.read_int(ptr + 0x4c), lambda inner_ptr: NetPlayerAtStartup(pm, pm.read_int(inner_ptr)))
+        self._netPlayersStartup = GenericList(pm, pm.read_int(ptr + 0x4c), lambda inner_ptr: NetPlayerAtStartup(pm, pm.read_int(inner_ptr)))
         self._defaultWin = pm.read_bytes(ptr + 0x64, 1) == '\x01'
-        # self._playerRanks = GenericList(pm, pm.read_int(ptr + 0x54), lambda inner_ptr: PlayerRankStruct(pm, pm.read_int(inner_ptr)))
+        self._playerRanks = GenericList(pm, pm.read_int(ptr + 0x54), lambda inner_ptr: PlayerRankStruct(pm, pm.read_int(inner_ptr)))
         self._autoNext = pm.read_bytes(ptr + 0x65, 1) == '\x01'
         self._gameType = SystemString(pm, pm.read_int(ptr + 0x58))
-        # self._ownRank = PlayerRankStruct(pm, pm.read_int(ptr + 0x5c))
+        self._ownRank = PlayerRankStruct(pm, pm.read_int(ptr + 0x5c))
         self._friendsMatch = pm.read_bytes(ptr + 0x66, 1) == '\x01'
         self._overtime = pm.read_bytes(ptr + 0x67, 1) == '\x01'
 
@@ -808,8 +1001,8 @@ class GameSetupData(BaseModel):
         if ptr == 0x0:
             return
         self.gameType = GameTypeModel(pm, pm.read_int(ptr + 0x8))
-        # self.world = WorldModel(pm, pm.read_int(ptr + 0xc))
-        # self.gameMode = GameModeModel(pm, pm.read_int(ptr + 0x10))
+        self.world = WorldModel(pm, pm.read_int(ptr + 0xc))
+        self.gameMode = GameModeModel(pm, pm.read_int(ptr + 0x10))
         # self.gameModes = GenericList(pm, pm.read_int(ptr + 0x14), lambda inner_ptr: GameModeModel(pm, pm.read_int(inner_ptr)))
         self.inputs = Array(
             pm, pm.read_int(ptr + 0x20),
@@ -840,8 +1033,6 @@ class GameSetupData(BaseModel):
                     _GameTypeFlowController = SingleOnlineMatchFlowController
             else:
                 _GameTypeFlowController = CupMatchFlowController
-
-        print(self.gameType.is_multiplayer())
 
         if _GameTypeFlowController:
             self.gameTypeFlow = _GameTypeFlowController(
