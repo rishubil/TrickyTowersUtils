@@ -120,12 +120,12 @@ class GenericDictionary(DataModel):
     def __init__(self, pm, ptr, key_type_init, value_type_init,
                  maybe_max=None):
         super().__init__(pm, ptr)
-        # if not self.is_initialized():
-        #     self.keySlots = None
-        #     self.valueSlots = None
-        #     self.count = 0
-        #     self.maybe_max = 0
-        #     return
+        if not self.is_initialized():
+            self.keySlots = None
+            self.valueSlots = None
+            self.count = 0
+            self.maybe_max = 0
+            return
         self.keySlots = Array(pm, pm.read_int(ptr + 0x10), key_type_init)
         self.valueSlots = Array(pm, pm.read_int(ptr + 0x14), value_type_init)
         self.count = pm.read_int(ptr + 0x20)
