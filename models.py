@@ -22,6 +22,10 @@ class BaseModel:
             else:
                 print(f'{tab}  {attr_name}: {attr}')
 
+    def is_initialized(self):
+        '''아마도 동작할 것'''
+        return self.ptr != 0x0 and self.pm.read_uint(self.ptr + 0x4) == 0
+
 
 class DataModel(BaseModel):
     @property
@@ -34,14 +38,14 @@ class DataModel(BaseModel):
         # print(
         #     f'{tab}{name_str}{self.__class__.__name__}({hex(self.ptr)}) = {self.value}'
         # )
-        print(f'{tab}{name_str}: {self.value}')
+        print(f'{tab}{name_str}{self.value}')
 
 
 class Array(BaseModel):
     def __init__(self, pm, ptr, _type_init):
         super().__init__(pm, ptr)
         self._type_init = _type_init
-        if ptr == 0x0:
+        if not self.is_initialized():
             self._size = 0
             self._first_ptr = 0
             return
@@ -81,7 +85,7 @@ class GenericList(BaseModel):
 
     def __init__(self, pm, ptr, _type_init):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self._items = None
             self._size = 0
             self._version = None
@@ -96,41 +100,49 @@ class GenericList(BaseModel):
 
 class GenericDictionary(DataModel):
     '''
-        17000198 : System.Collections.Generic.Dictionary`2[TKey,TValue]
-			static fields
-				0 : <>f__am$cacheB (type: System.Collections.Generic.Dictionary.Transform<TKey,TValue,System.Collections.DictionaryEntry>)
-			fields
-				8 : table (type: System.Int32[])
-				c : linkSlots (type: System.Collections.Generic.Link[])
-				10 : keySlots (type: TKey[])
-				14 : valueSlots (type: TValue[])
-				18 : touchedSlots (type: System.Int32)
-				1c : emptySlot (type: System.Int32)
-				20 : count (type: System.Int32)
-				24 : threshold (type: System.Int32)
-				28 : hcp (type: System.Collections.Generic.IEqualityComparer<TKey>)
-				2c : serialization_info (type: System.Runtime.Serialization.SerializationInfo)
-				30 : generation (type: System.Int32)
+    17000198 : System.Collections.Generic.Dictionary`2[TKey,TValue]
+        static fields
+            0 : <>f__am$cacheB (type: System.Collections.Generic.Dictionary.Transform<TKey,TValue,System.Collections.DictionaryEntry>)
+        fields
+            8 : table (type: System.Int32[])
+            c : linkSlots (type: System.Collections.Generic.Link[])
+            10 : keySlots (type: TKey[])
+            14 : valueSlots (type: TValue[])
+            18 : touchedSlots (type: System.Int32)
+            1c : emptySlot (type: System.Int32)
+            20 : count (type: System.Int32)
+            24 : threshold (type: System.Int32)
+            28 : hcp (type: System.Collections.Generic.IEqualityComparer<TKey>)
+            2c : serialization_info (type: System.Runtime.Serialization.SerializationInfo)
+            30 : generation (type: System.Int32)
     '''
 
-    def __init__(self, pm, ptr, key_type_init, value_type_init, maybe_max=None):
+    def __init__(self, pm, ptr, key_type_init, value_type_init,
+                 maybe_max=None):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
-            self.keySlots = None
-            self.valueSlots = None
-            self.touchedSlots = 0
-            self.maybe_max = 0
-            return
+        # if not self.is_initialized():
+        #     self.keySlots = None
+        #     self.valueSlots = None
+        #     self.count = 0
+        #     self.maybe_max = 0
+        #     return
         self.keySlots = Array(pm, pm.read_int(ptr + 0x10), key_type_init)
         self.valueSlots = Array(pm, pm.read_int(ptr + 0x14), value_type_init)
-        self.touchedSlots = pm.read_int(ptr + 0x18)
+        self.count = pm.read_int(ptr + 0x20)
         self.maybe_max = maybe_max
+        print('---')
+        print(f'count: {self.count}')
+        self.keySlots.print_tree('keySlots')
+        self.valueSlots.print_tree('valueSlots')
+        print('---')
 
     @property
     def value(self):
+        if not self.is_initialized():
+            return None
         result = {}
         _next = 0
-        _max = self.maybe_max if self.maybe_max else self.touchedSlots
+        _max = self.maybe_max if self.maybe_max else self.count
         while (_next < _max):
             cur = _next
             try:
@@ -146,7 +158,12 @@ class GenericDictionary(DataModel):
         tab = '  ' * depth
         name_str = f'{name}: ' if name else ''
         value = self.value
-        print(f'{tab}{name_str}{self.__class__.__name__}({hex(self.ptr)}) = size({len(value)})')
+        if not self.is_initialized():
+            print(f'{tab}{name_str}{value}')
+            return
+        print(
+            f'{tab}{name_str}{self.__class__.__name__}({hex(self.ptr)}) = size({len(value)})'
+        )
         for key in value:
             v = value[key]
             if isinstance(v, BaseModel):
@@ -168,7 +185,7 @@ class SystemString(DataModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self.length = 0
             self.start_char_ptr = 0x0
             return
@@ -177,7 +194,7 @@ class SystemString(DataModel):
 
     @property
     def value(self):
-        if self.ptr == 0x0:
+        if not self.is_initialized():
             return None
         chars = [
             chr(self.pm.read_ushort(self.start_char_ptr + 0x2 * i))
@@ -201,7 +218,7 @@ class CSteamID(DataModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self.m_SteamID = None
             return
         self.m_SteamID = pm.read_ulonglong(ptr + 0x8)
@@ -222,7 +239,7 @@ class DataModelBool(DataModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self._value = None
             return
         self._value = pm.read_bytes(ptr + 0xc, 1)
@@ -243,7 +260,7 @@ class DataModelString(DataModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self._value = None
             return
         self._value = SystemString(pm, pm.read_int(ptr + 0xc))
@@ -268,7 +285,7 @@ class DataModelInt(DataModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self._value = None
             return
         self._value = pm.read_int(ptr + 0x18)
@@ -289,7 +306,7 @@ class DataModelFloat(DataModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self._value = None
             return
         self._value = pm.read_float(ptr + 0xc)
@@ -310,7 +327,7 @@ class DataModelList(BaseModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self._list = None
             return
         self._list = GenericList(
@@ -336,7 +353,7 @@ class UserManager(BaseModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self._implementation = None
             return
         self._implementation = PCUserManager(pm, pm.read_int(ptr + 0x20))
@@ -358,7 +375,7 @@ class PCUserManager(BaseModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self._currentUser = None
             self._users = None
             return
@@ -386,7 +403,7 @@ class PCSteamUser(BaseModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self.gameStats = None
             self._name = None
             self._id = None
@@ -400,6 +417,235 @@ class PCSteamUser(BaseModel):
         self._steamId = CSteamID(pm, pm.read_int(ptr + 0x20))
 
 
+class TournamentResultsItem(BaseModel):
+    '''
+    17a47c68 : TournamentResultsItem
+        fields
+            8 : requestEffect (type: System.Action<AbstractEffect>)
+            c : showWinnerComplete (type: System.Action)
+            10 : skin (type: UnityEngine.GameObject)
+            34 : _targetScore (type: System.Int32)
+            14 : _medalContainer (type: UnityEngine.GameObject)
+            18 : _rankings (type: System.Collections.Generic.List<PlayerMatchResult>)
+            1c : _playerName (type: System.String)
+            38 : _wizardId (type: System.Int32)
+            3c : _overtimeMedals (type: System.Int32)
+            20 : _overtimeLabel (type: TMPro.TextMeshProUGUI)
+            24 : _cupType (type: System.String)
+            40 : _cupWon (type: System.Boolean)
+            41 : _online (type: System.Boolean)
+            42 : _animateMedals (type: System.Boolean)
+            28 : _trophy (type: UnityEngine.GameObject)
+            2c : _userData (type: System.Object)
+            30 : _avatarComponent (type: AvatarComponent)
+    '''
+
+    def __init__(self, pm, ptr):
+        super().__init__(pm, ptr)
+        if not self.is_initialized():
+            self._targetScore = None
+            self._rankings = None
+            self._playerName = None
+            self._wizardId = None
+            self._overtimeMedals = None
+            self._cupType = None
+            self._cupWon = None
+            self._online = None
+            self._animateMedals = None
+            return
+        self._targetScore = pm.read_int(ptr + 0x34)
+        self._rankings = GenericList(
+            pm, ptr + 0x18,
+            lambda inner_ptr: PlayerMatchResult(pm, pm.read_int(inner_ptr)))
+        self._playerName = SystemString(pm, pm.read_int(ptr + 0x1c))
+        self._wizardId = pm.read_int(ptr + 0x38)
+        self._overtimeMedals = pm.read_int(ptr + 0x38)
+        self._cupType = SystemString(pm, pm.read_int(ptr + 0x24))
+        self._cupWon = pm.read_bytes(ptr + 0x40, 1) == '\x01'
+        self._online = pm.read_bytes(ptr + 0x41, 1) == '\x01'
+        self._animateMedals = pm.read_bytes(ptr + 0x42, 1) == '\x01'
+
+
+class BasePopup(BaseModel):
+    '''
+    1702eea0 : BasePopup
+        fields
+            8 : close (type: System.Action<BasePopup>)
+            c : <skin>k__BackingField (type: UnityEngine.GameObject)
+            10 : _inputLayer (type: InputActionLayer)
+            14 : _container (type: UnityEngine.GameObject)
+            18 : _tweener (type: DG.Tweening.Tweener)
+            1c : _canvasGroup (type: UnityEngine.CanvasGroup)
+            20 : _popupPosition (type: UnityEngine.RectTransform)
+            24 : _autoCleanup (type: System.Boolean)
+            25 : _useMoveInTween (type: System.Boolean)
+            26 : _cursorWasVisible (type: System.Boolean)
+            27 : _showCursor (type: System.Boolean)
+    '''
+    pass
+
+
+class AbstractTournamentResultsPopup(BasePopup):
+    '''
+    1702eea0 : BasePopup
+        fields
+            8 : close (type: System.Action<BasePopup>)
+            c : <skin>k__BackingField (type: UnityEngine.GameObject)
+            10 : _inputLayer (type: InputActionLayer)
+            14 : _container (type: UnityEngine.GameObject)
+            18 : _tweener (type: DG.Tweening.Tweener)
+            1c : _canvasGroup (type: UnityEngine.CanvasGroup)
+            20 : _popupPosition (type: UnityEngine.RectTransform)
+            24 : _autoCleanup (type: System.Boolean)
+            25 : _useMoveInTween (type: System.Boolean)
+            26 : _cursorWasVisible (type: System.Boolean)
+            27 : _showCursor (type: System.Boolean)
+    17a70a30 : AbstractTournamentResultsPopup
+        fields
+            28 : next (type: System.Action)
+            2c : _tournamentResults (type: System.Collections.Generic.Dictionary<System.String,System.Collections.Generic.List<PlayerMatchResult>>)
+            30 : _tournamentResultItems (type: System.Collections.Generic.Dictionary<System.String,TournamentResultsItem>)
+            34 : _controllerIds (type: System.Collections.Generic.List<System.String>)
+            58 : _targetScore (type: System.Int32)
+            38 : _playerInfo (type: UnityEngine.GameObject)
+            3c : _confirmButton (type: UnityEngine.GameObject)
+            40 : _effectRunner (type: EffectRunner)
+            44 : _updateHandler (type: UpdateHandler)
+            48 : _wizardIds (type: System.Collections.Generic.List<System.Int32>)
+            4c : _winningControllerId (type: System.String)
+            50 : _cupType (type: System.String)
+            5c : _animationCompleted (type: System.Boolean)
+            54 : _netPlayers (type: System.Collections.Generic.List<NetPlayerAtStartup>)
+    17a7e070 : TournamentResultsPopup
+        fields
+            64 : _autoNext (type: System.Boolean)
+            60 : _mouseEventHandler (type: MouseEventHandler)
+    '''
+
+    def __init__(self, pm, ptr):
+        super().__init__(pm, ptr)
+        if not self.is_initialized():
+            self._tournamentResults = None
+            self._tournamentResultItems = None
+            self._controllerIds = None
+            self._targetScore = None
+            self._wizardIds = None
+            self._winningControllerId = None
+            self._cupType = None
+            self._animationCompleted = None
+            self._netPlayers = None
+            return
+        self._tournamentResults = GenericDictionary(
+            pm, ptr + 0x2c,
+            lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)),
+            lambda inner_ptr: GenericList(pm, pm.read_int(inner_ptr), lambda inner_ptr: PlayerMatchResult(pm, pm.read_int(inner_ptr))))
+        self._tournamentResultItems = GenericDictionary(
+            pm, ptr + 0x30,
+            lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)),
+            lambda inner_ptr: TournamentResultsItem(pm, pm.read_int(inner_ptr))
+        )
+        # self._controllerIds = GenericList(
+        #     pm, ptr + 0x34,
+        #     lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)))
+        self._targetScore = pm.read_int(ptr + 0x58)
+        # self._wizardIds = GenericList(
+        #     pm, ptr + 0x48,
+        #     lambda inner_ptr: pm.read_int(inner_ptr))
+        self._winningControllerId = SystemString(pm, pm.read_int(ptr + 0x4c))
+        self._cupType = SystemString(pm, pm.read_int(ptr + 0x50))
+        self._animationCompleted = pm.read_bytes(ptr + 0x5c, 1) == '\x01'
+        # self._netPlayers = GenericList(
+        #     pm, ptr + 0x54,
+        #     lambda inner_ptr: NetPlayerAtStartup(pm, pm.read_int(inner_ptr)))
+
+
+class TournamentResultsPopup(AbstractTournamentResultsPopup):
+    '''
+    1702eea0 : BasePopup
+        fields
+            8 : close (type: System.Action<BasePopup>)
+            c : <skin>k__BackingField (type: UnityEngine.GameObject)
+            10 : _inputLayer (type: InputActionLayer)
+            14 : _container (type: UnityEngine.GameObject)
+            18 : _tweener (type: DG.Tweening.Tweener)
+            1c : _canvasGroup (type: UnityEngine.CanvasGroup)
+            20 : _popupPosition (type: UnityEngine.RectTransform)
+            24 : _autoCleanup (type: System.Boolean)
+            25 : _useMoveInTween (type: System.Boolean)
+            26 : _cursorWasVisible (type: System.Boolean)
+            27 : _showCursor (type: System.Boolean)
+    17a70a30 : AbstractTournamentResultsPopup
+        fields
+            28 : next (type: System.Action)
+            2c : _tournamentResults (type: System.Collections.Generic.Dictionary<System.String,System.Collections.Generic.List<PlayerMatchResult>>)
+            30 : _tournamentResultItems (type: System.Collections.Generic.Dictionary<System.String,TournamentResultsItem>)
+            34 : _controllerIds (type: System.Collections.Generic.List<System.String>)
+            58 : _targetScore (type: System.Int32)
+            38 : _playerInfo (type: UnityEngine.GameObject)
+            3c : _confirmButton (type: UnityEngine.GameObject)
+            40 : _effectRunner (type: EffectRunner)
+            44 : _updateHandler (type: UpdateHandler)
+            48 : _wizardIds (type: System.Collections.Generic.List<System.Int32>)
+            4c : _winningControllerId (type: System.String)
+            50 : _cupType (type: System.String)
+            5c : _animationCompleted (type: System.Boolean)
+            54 : _netPlayers (type: System.Collections.Generic.List<NetPlayerAtStartup>)
+    17a7e070 : TournamentResultsPopup
+        fields
+            64 : _autoNext (type: System.Boolean)
+            60 : _mouseEventHandler (type: MouseEventHandler)
+    '''
+    pass
+
+
+class TournamentCurrentScorePopup(AbstractTournamentResultsPopup):
+    '''
+    1702eea0 : BasePopup
+        fields
+            8 : close (type: System.Action<BasePopup>)
+            c : <skin>k__BackingField (type: UnityEngine.GameObject)
+            10 : _inputLayer (type: InputActionLayer)
+            14 : _container (type: UnityEngine.GameObject)
+            18 : _tweener (type: DG.Tweening.Tweener)
+            1c : _canvasGroup (type: UnityEngine.CanvasGroup)
+            20 : _popupPosition (type: UnityEngine.RectTransform)
+            24 : _autoCleanup (type: System.Boolean)
+            25 : _useMoveInTween (type: System.Boolean)
+            26 : _cursorWasVisible (type: System.Boolean)
+            27 : _showCursor (type: System.Boolean)
+    17a70a30 : AbstractTournamentResultsPopup
+        fields
+            28 : next (type: System.Action)
+            2c : _tournamentResults (type: System.Collections.Generic.Dictionary<System.String,System.Collections.Generic.List<PlayerMatchResult>>)
+            30 : _tournamentResultItems (type: System.Collections.Generic.Dictionary<System.String,TournamentResultsItem>)
+            34 : _controllerIds (type: System.Collections.Generic.List<System.String>)
+            58 : _targetScore (type: System.Int32)
+            38 : _playerInfo (type: UnityEngine.GameObject)
+            3c : _confirmButton (type: UnityEngine.GameObject)
+            40 : _effectRunner (type: EffectRunner)
+            44 : _updateHandler (type: UpdateHandler)
+            48 : _wizardIds (type: System.Collections.Generic.List<System.Int32>)
+            4c : _winningControllerId (type: System.String)
+            50 : _cupType (type: System.String)
+            5c : _animationCompleted (type: System.Boolean)
+            54 : _netPlayers (type: System.Collections.Generic.List<NetPlayerAtStartup>)
+    17a70978 : TournamentCurrentScorePopup
+        fields
+            60 : _open (type: System.Boolean)
+            64 : _previousPlayerCount (type: System.Int32)
+    '''
+
+    def __init__(self, pm, ptr):
+        super().__init__(pm, ptr)
+        if not self.is_initialized():
+            self._open = None
+            self._previousPlayerCount = None
+            return
+
+        self._open = pm.read_bytes(ptr + 0x60, 1) == '\x01'
+        self._previousPlayerCount = pm.read_int(ptr + 0x64)
+
+
 class SelectModel(BaseModel):
     '''
     66cb3d8 : SelectModel
@@ -411,7 +657,7 @@ class SelectModel(BaseModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self.id = None
             self.name = None
             self.resourceName = None
@@ -438,7 +684,7 @@ class GameTypeFlowModel(SelectModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self.selectable = None
             return
         self.selectable = pm.read_bytes(ptr + 0x10, 1) == '\x01'
@@ -468,7 +714,7 @@ class GameTypeModel(SelectModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self.worlds = None
             self.type = None
             self.startState = None
@@ -481,6 +727,9 @@ class GameTypeModel(SelectModel):
 
     def is_multiplayer(self):
         return self.type.value == self.TYPE_MULTIPLAYER_ONLINE or self.type.value == self.TYPE_MULTIPLAYER_LOCAL
+
+    def is_online_multiplayer(self):
+        return self.type.value == self.TYPE_MULTIPLAYER_ONLINE
 
 
 class GameStats(BaseModel):
@@ -529,7 +778,7 @@ class GameStats(BaseModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self.levelId = None
             self.worldId = None
             self.levelType = None
@@ -619,7 +868,7 @@ class PlayerMatchResult(BaseModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self.rank = None
             self.difficulty = None
             return
@@ -646,7 +895,7 @@ class WorldModel(SelectModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self.type = None
             self.gameModes = None
             self.medalCost = None
@@ -658,6 +907,7 @@ class WorldModel(SelectModel):
         #     lambda inner_ptr: SelectModel(pm, pm.read_int(inner_ptr)))
         self.medalCost = pm.read_int(ptr + 0x1c)
         self.unlocked = pm.read_bytes(ptr + 0x20, 1) == '\x01'
+
 
 class GameModeModel(SelectModel):
     '''
@@ -687,7 +937,7 @@ class GameModeModel(SelectModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self.explanationId = None
             self.type = None
             self.parentWorld = None
@@ -739,7 +989,7 @@ class NetPlayer(BaseModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self._id = None
             self.destroying = None
             self.numActionsLastGame = None
@@ -764,6 +1014,7 @@ class NetPlayer(BaseModel):
         self._steamId = pm.read_ulonglong(ptr + 0x60)
         self._eloScore = pm.read_int(ptr + 0x68)
 
+
 class NetPlayerAtStartup(BaseModel):
     '''
     171a7a58 : NetPlayerAtStartup
@@ -779,7 +1030,7 @@ class NetPlayerAtStartup(BaseModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self.netPlayer = None
             self.username = None
             self.wizardId = None
@@ -796,6 +1047,7 @@ class NetPlayerAtStartup(BaseModel):
         self.id = SystemString(pm, pm.read_int(ptr + 0x10))
         self.steamId = pm.read_ulonglong(ptr + 0x20)
 
+
 class PlayerRankStruct(BaseModel):
     '''
     17197c88 : PlayerRankStruct
@@ -807,7 +1059,7 @@ class PlayerRankStruct(BaseModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self.player = None
             self.rank = None
             self.experience = None
@@ -815,6 +1067,7 @@ class PlayerRankStruct(BaseModel):
         self.player = NetPlayer(pm, pm.read_int(ptr + 0x8))
         self.rank = pm.read_int(ptr + 0xc)
         self.experience = pm.read_int(ptr + 0x10)
+
 
 class AbstractMultiplayerGameTypeFlowController(BaseModel):
     '''
@@ -834,7 +1087,7 @@ class AbstractMultiplayerGameTypeFlowController(BaseModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self.allowRetry = None
             self.finished = None
             return
@@ -881,7 +1134,7 @@ class CupMatchFlowController(AbstractMultiplayerGameTypeFlowController):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self._resultsByPlayer = None
             self._controllerIds = None
             self._wizardIdsByPlayer = None
@@ -918,9 +1171,11 @@ class CupMatchFlowController(AbstractMultiplayerGameTypeFlowController):
         # self._winningGameController = AbstractGameController(pm, pm.read_int(ptr + 0x40))
         # self._gameModes = GenericList(pm, pm.read_int(ptr + 0x44), lambda inner_ptr: GameModeModel(pm, pm.read_int(inner_ptr)))
         self._cupType = SystemString(pm, pm.read_int(ptr + 0x48))
-        self._netPlayersStartup = GenericList(pm, pm.read_int(ptr + 0x4c), lambda inner_ptr: NetPlayerAtStartup(pm, pm.read_int(inner_ptr)))
+        # self._netPlayersStartup = GenericList(pm, pm.read_int(ptr + 0x4c), lambda inner_ptr: NetPlayerAtStartup(pm, pm.read_int(inner_ptr)))
         self._defaultWin = pm.read_bytes(ptr + 0x64, 1) == '\x01'
-        self._playerRanks = GenericList(pm, pm.read_int(ptr + 0x54), lambda inner_ptr: PlayerRankStruct(pm, pm.read_int(inner_ptr)))
+        self._playerRanks = GenericList(
+            pm, pm.read_int(ptr + 0x54),
+            lambda inner_ptr: PlayerRankStruct(pm, pm.read_int(inner_ptr)))
         self._autoNext = pm.read_bytes(ptr + 0x65, 1) == '\x01'
         self._gameType = SystemString(pm, pm.read_int(ptr + 0x58))
         self._ownRank = PlayerRankStruct(pm, pm.read_int(ptr + 0x5c))
@@ -997,7 +1252,7 @@ class GameSetupData(BaseModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             return
         self.gameType = GameTypeModel(pm, pm.read_int(ptr + 0x8))
         self.world = WorldModel(pm, pm.read_int(ptr + 0xc))
@@ -1047,6 +1302,188 @@ class GameSetupData(BaseModel):
         self.privateGame = pm.read_bytes(ptr + 0x4c, 1) == b'\x01'
 
 
+class AbstractGameTypeController(BaseModel):
+    '''
+    1716f180 : AbstractGameTypeController
+        static fields
+            0 : CONTROLLER_IDS (type: System.Collections.Generic.List<System.String>)
+        fields
+            8 : gameFinish (type: System.Action<System.String[],System.Single[]>)
+            c : gameQuit (type: System.Action<System.String>)
+            10 : retry (type: System.Action)
+            14 : next (type: System.Action)
+            18 : cont (type: System.Action)
+            1c : _inputs (type: System.String[])
+            20 : _gameSetup (type: GameSetupData)
+            24 : _gameMode (type: AbstractGameMode)
+            28 : _gameTypeFlow (type: AbstractGameTypeFlowController)
+            2c : _gameControllers (type: System.Collections.Generic.Dictionary<System.String,AbstractGameController>)
+            30 : _finishedGameControllers (type: System.Collections.Generic.List<AbstractGameController>)
+            60 : _finishGame (type: System.Boolean)
+            34 : _winningControllers (type: AbstractGameController[])
+            38 : _winningControllerIds (type: System.String[])
+            3c : _towerValues (type: System.Single[])
+            40 : _gameControllersToEnd (type: System.Collections.Generic.List<System.String>)
+            44 : _pauseMenu (type: PauseMenu)
+            48 : _worldObjectSpawner (type: AbstractWorldObjectSpawner)
+            4c : _spellCaster (type: AbstractSpellCaster)
+            50 : _actionLayer (type: InputActionLayer)
+            61 : _pausable (type: System.Boolean)
+            54 : _fadeOutHandler (type: DG.Tweening.TweenCallback)
+            62 : _fadeOutComplete (type: System.Boolean)
+            58 : _fadeOutTween (type: DG.Tweening.Tweener)
+            5c : _gameOverlayActivated (type: Steamworks.Callback<Steamworks.GameOverlayActivated_t>)
+    '''
+
+    def __init__(self, pm, ptr):
+        super().__init__(pm, ptr)
+        if not self.is_initialized():
+            self._inputs = None
+            self._finishGame = None
+            return
+        # self._inputs = Array(pm, ptr + 0x1c, lambda inner_ptr: SystemString(pm, inner_ptr))
+        # self._finishGame = pm.read_bytes(ptr + 0x60, 1) == b'\x01'
+
+
+class AbstractMultiplayerGameTypeController(AbstractGameTypeController):
+    '''
+    1716f180 : AbstractGameTypeController
+        static fields
+            0 : CONTROLLER_IDS (type: System.Collections.Generic.List<System.String>)
+        fields
+            8 : gameFinish (type: System.Action<System.String[],System.Single[]>)
+            c : gameQuit (type: System.Action<System.String>)
+            10 : retry (type: System.Action)
+            14 : next (type: System.Action)
+            18 : cont (type: System.Action)
+            1c : _inputs (type: System.String[])
+            20 : _gameSetup (type: GameSetupData)
+            24 : _gameMode (type: AbstractGameMode)
+            28 : _gameTypeFlow (type: AbstractGameTypeFlowController)
+            2c : _gameControllers (type: System.Collections.Generic.Dictionary<System.String,AbstractGameController>)
+            30 : _finishedGameControllers (type: System.Collections.Generic.List<AbstractGameController>)
+            60 : _finishGame (type: System.Boolean)
+            34 : _winningControllers (type: AbstractGameController[])
+            38 : _winningControllerIds (type: System.String[])
+            3c : _towerValues (type: System.Single[])
+            40 : _gameControllersToEnd (type: System.Collections.Generic.List<System.String>)
+            44 : _pauseMenu (type: PauseMenu)
+            48 : _worldObjectSpawner (type: AbstractWorldObjectSpawner)
+            4c : _spellCaster (type: AbstractSpellCaster)
+            50 : _actionLayer (type: InputActionLayer)
+            61 : _pausable (type: System.Boolean)
+            54 : _fadeOutHandler (type: DG.Tweening.TweenCallback)
+            62 : _fadeOutComplete (type: System.Boolean)
+            58 : _fadeOutTween (type: DG.Tweening.Tweener)
+            5c : _gameOverlayActivated (type: Steamworks.Callback<Steamworks.GameOverlayActivated_t>)
+    17a44bf0 : AbstractMultiplayerGameTypeController
+    '''
+    pass
+
+
+class OnlineMultiplayerGameTypeController(AbstractMultiplayerGameTypeController):
+    '''
+    1716f180 : AbstractGameTypeController
+        static fields
+            0 : CONTROLLER_IDS (type: System.Collections.Generic.List<System.String>)
+        fields
+            8 : gameFinish (type: System.Action<System.String[],System.Single[]>)
+            c : gameQuit (type: System.Action<System.String>)
+            10 : retry (type: System.Action)
+            14 : next (type: System.Action)
+            18 : cont (type: System.Action)
+            1c : _inputs (type: System.String[])
+            20 : _gameSetup (type: GameSetupData)
+            24 : _gameMode (type: AbstractGameMode)
+            28 : _gameTypeFlow (type: AbstractGameTypeFlowController)
+            2c : _gameControllers (type: System.Collections.Generic.Dictionary<System.String,AbstractGameController>)
+            30 : _finishedGameControllers (type: System.Collections.Generic.List<AbstractGameController>)
+            60 : _finishGame (type: System.Boolean)
+            34 : _winningControllers (type: AbstractGameController[])
+            38 : _winningControllerIds (type: System.String[])
+            3c : _towerValues (type: System.Single[])
+            40 : _gameControllersToEnd (type: System.Collections.Generic.List<System.String>)
+            44 : _pauseMenu (type: PauseMenu)
+            48 : _worldObjectSpawner (type: AbstractWorldObjectSpawner)
+            4c : _spellCaster (type: AbstractSpellCaster)
+            50 : _actionLayer (type: InputActionLayer)
+            61 : _pausable (type: System.Boolean)
+            54 : _fadeOutHandler (type: DG.Tweening.TweenCallback)
+            62 : _fadeOutComplete (type: System.Boolean)
+            58 : _fadeOutTween (type: DG.Tweening.Tweener)
+            5c : _gameOverlayActivated (type: Steamworks.Callback<Steamworks.GameOverlayActivated_t>)
+    17a44bf0 : AbstractMultiplayerGameTypeController
+    17a44b38 : OnlineMultiplayerGameTypeController
+        fields
+            64 : _wizardIds (type: System.Int32[])
+            68 : _brickPackIds (type: System.String[])
+            6c : _netPlayerGameControllers (type: System.Collections.Generic.Dictionary<NetPlayer,AbstractGameController>)
+            70 : _gameControllerNetPlayers (type: System.Collections.Generic.Dictionary<AbstractGameController,NetPlayer>)
+            74 : _gameModeSetupMessageHelper (type: NetworkWriterMessageHelper)
+            78 : _readyMessageHelper (type: NetworkMessageHelper<UnityEngine.Networking.NetworkSystem.ReadyMessage>)
+            7c : _gameStateMessageHelper (type: ServerClientNetworkMessageHelper<PlayerStringFloatMessage,TimestampedPlayerStringFloatMessage>)
+            80 : _gameBaskStateMessageHelper (type: NetworkMessageHelper<BaskStateDataMessage>)
+            84 : _gameEndMessageHelper (type: NetworkMessageHelper<PlayerFloatMessage>)
+            88 : _gameWonMessageHelper (type: NetworkMessageHelper<GameWonMessage>)
+            8c : _gameStateAtTimeMessageHelper (type: ServerClientNetworkMessageHelper<FloatMessage,PlayerStringFloatMessage>)
+            90 : _audioMessageHelper (type: NetworkMessageHelper<AudioEffectMessage>)
+            94 : _gameStatesAtTime (type: System.Collections.Generic.Dictionary<System.Single,System.Collections.Generic.Dictionary<AbstractGameController,System.String>>)
+            98 : _dataModelSyncers (type: System.Collections.Generic.List<AbstractNetworkGameDataModelSyncer>)
+            9c : _finishedTimer (type: Timer)
+            a0 : _confirmPopup (type: ConfirmPopup)
+            a4 : _networkErrorPopup (type: MessagePopup)
+            a8 : _migrationPopup (type: HostMigrationPopup)
+            ac : _gameInfoPopup (type: BasePopup)
+            b0 : _gameInfoButtonPopup (type: GameInfoButtonPopup)
+            b4 : _levelUpdatePopup (type: LevelUpdatePopup)
+            d8 : _initialized (type: System.Boolean)
+            d9 : _setupCompleted (type: System.Boolean)
+            da : _allGameControllersReady (type: System.Boolean)
+            db : _startGameCalled (type: System.Boolean)
+            dc : _gamePlaying (type: System.Boolean)
+            e0 : _lastPlayerStatusChangedCheck (type: System.Single)
+            e4 : _firstPlayerStatusChangedCheck (type: System.Single)
+            e8 : _readyMessageSent (type: System.Boolean)
+            e9 : _gameWon (type: System.Boolean)
+            ea : _gameWonMessageSent (type: System.Boolean)
+            eb : _removeNetworkObjectsOnCleanup (type: System.Boolean)
+            b8 : _setupConnections (type: System.Collections.Generic.List<UnityEngine.Networking.NetworkConnection>)
+            bc : _gamePlayStats (type: GamePlayStats)
+            c0 : _countDownEffects (type: System.Collections.Generic.List<CountDownEffect>)
+            c4 : _gameModeModel (type: GameModeModel)
+            c8 : _gameControllerEloScores (type: System.Collections.Generic.Dictionary<AbstractGameController,System.Int32>)
+            ec : _eloScoreUpdated (type: System.Boolean)
+            f0 : _inviteMode (type: GameSetupData.InviteMode)
+            f4 : _hostMigrationStartedAt (type: System.Single)
+            cc : _lastSentLocalGameStateRequestMessage (type: System.Collections.Generic.Dictionary<NetPlayer,TimestampedPlayerStringFloatMessage>)
+            d0 : _netplayersAtStartup (type: System.Collections.Generic.List<NetPlayerAtStartup>)
+            d4 : _effectRunner (type: EffectRunner)
+    '''
+
+    def __init__(self, pm, ptr):
+        super().__init__(pm, ptr)
+        if not self.is_initialized():
+            self._gameInfoPopup = None
+            self._initialized = None
+            self._setupCompleted = None
+            self._allGameControllersReady = None
+            self._startGameCalled = None
+            self._gamePlaying = None
+            self._gameWon = None
+            self._netPlayersStartup = None
+            return
+        self._gameInfoPopup = TournamentCurrentScorePopup(pm, ptr + 0xac)
+        self._initialized = pm.read_bytes(ptr + 0xd8, 1) == '\x01'
+        self._setupCompleted = pm.read_bytes(ptr + 0xd9, 1) == '\x01'
+        self._allGameControllersReady = pm.read_bytes(ptr + 0xda, 1) == '\x01'
+        self._startGameCalled = pm.read_bytes(ptr + 0xdb, 1) == '\x01'
+        self._gamePlaying = pm.read_bytes(ptr + 0xdc, 1) == '\x01'
+        self._gameWon = pm.read_bytes(ptr + 0xe9, 1) == '\x01'
+        self._netPlayersStartup = GenericList(
+            pm, pm.read_int(ptr + 0xd0),
+            lambda inner_ptr: NetPlayerAtStartup(pm, pm.read_int(inner_ptr)))
+
+
 class GameStateController(BaseModel):
     '''
     1716d758 : AbstractStateController
@@ -1079,7 +1516,15 @@ class GameStateController(BaseModel):
 
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
-        if ptr == 0x0:
+        if not self.is_initialized():
             self._gameSetup = None
+            self._gameTypeController = None
             return
         self._gameSetup = GameSetupData(pm, pm.read_int(ptr + 0x24))
+
+        self._gameTypeController = None
+        if self._gameSetup and hasattr(
+                self._gameSetup, 'gameType') and self._gameSetup.gameType:
+            if self._gameSetup.gameType.is_online_multiplayer():
+                self._gameTypeController = OnlineMultiplayerGameTypeController(
+                    pm, pm.read_int(ptr + 0x20))

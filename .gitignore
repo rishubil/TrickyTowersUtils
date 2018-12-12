@@ -3,3 +3,4 @@ scan/
 .vscode/
 __pycache__/
 config.ini
+.idea/
