@@ -34,7 +34,10 @@ class BaseModel:
         for attr_name in self.attrs():
             if hasattr(self, attr_name):
                 attr = getattr(self, attr_name)
-                obj[attr_name] = self.unpack(attr)
+                if attr_name == 'ptr':
+                    obj[attr_name] = hex(attr)
+                else:
+                    obj[attr_name] = self.unpack(attr)
         return obj
 
     def is_initialized(self):
@@ -99,13 +102,19 @@ class Array(ListModel):
         self._first_ptr = ptr + 0x10
 
     def index_ptr(self, index):
+        if not self.is_initialized():
+            return 0x0
         return self._first_ptr + self.item_size * index
 
     def get(self, index):
+        if not self.is_initialized():
+            return None
         return self._type_init(self.index_ptr(index))
 
     @property
     def length(self):
+        if not self.is_initialized():
+            return 0
         return self._size
 
 
@@ -414,7 +423,7 @@ class DataModelList(ListModel):
 
     @property
     def length(self):
-        return self._list.length()
+        return self._list.length
 
 
 class UserManager(BaseModel):
@@ -968,7 +977,7 @@ class GameStats(BaseModel):
         self.numPlayers = DataModelInt(pm, pm.read_int(ptr + 0x54))
         self.gameQuit = DataModelBool(pm, pm.read_int(ptr + 0x58))
         self.isHost = DataModelBool(pm, pm.read_int(ptr + 0x5c))
-        self.spellsUsed = DataModelList(pm, pm.read_int(ptr + 0x60))
+        # self.spellsUsed = DataModelList(pm, pm.read_int(ptr + 0x60))
         self.medalCount = DataModelInt(pm, pm.read_int(ptr + 0x64))
         self.health = DataModelInt(pm, pm.read_int(ptr + 0x68))
         self.maxIvyBricksConnected = DataModelInt(pm, pm.read_int(ptr + 0x6c))
