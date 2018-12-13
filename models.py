@@ -8,19 +8,34 @@ class BaseModel:
         self.ptr = ptr
         # print(f'{self.__class__.__name__}({hex(self.ptr)})')
 
+    @classmethod
+    def attrs(cls):
+        return ['ptr']
+
+    def unpack(self, v):
+        return v.serialize() if isinstance(v, BaseModel) else v
+
     def print_tree(self, name=None, depth=0):
         tab = '  ' * depth
         name_str = f'{name}: ' if name else ''
         print(f'{tab}{name_str}{self.__class__.__name__}({hex(self.ptr)})')
-        vs = vars(self)
-        for attr_name in vs:
-            if attr_name in ('pm', 'ptr'):
-                continue
-            attr = vs[attr_name]
-            if isinstance(attr, BaseModel):
-                attr.print_tree(attr_name, depth + 1)
+        for attr_name in self.attrs():
+            if not hasattr(self, attr_name):
+                print(f'{tab}  {attr_name}: !NOT_PARSED')
             else:
-                print(f'{tab}  {attr_name}: {attr}')
+                attr = getattr(self, attr_name)
+                if isinstance(attr, BaseModel):
+                    attr.print_tree(attr_name, depth + 1)
+                else:
+                    print(f'{tab}  {attr_name}: {attr}')
+
+    def serialize(self):
+        obj = {}
+        for attr_name in self.attrs():
+            if hasattr(self, attr_name):
+                attr = getattr(self, attr_name)
+                obj[attr_name] = self.unpack(attr)
+        return obj
 
     def is_initialized(self):
         '''아마도 동작할 것'''
@@ -40,39 +55,87 @@ class DataModel(BaseModel):
         # )
         print(f'{tab}{name_str}{self.value}')
 
+    def serialize(self):
+        return self.unpack(self.value)
 
-class Array(BaseModel):
-    def __init__(self, pm, ptr, _type_init):
-        super().__init__(pm, ptr)
-        self._type_init = _type_init
-        if not self.is_initialized():
-            self._size = 0
-            self._first_ptr = 0
-            return
-        self._size = pm.read_int(ptr + 0xc)
-        self._first_ptr = ptr + 0x10
 
-    def index_ptr(self, index):
-        return self._first_ptr + 0x4 * index
-
+class ListModel(BaseModel):
     def get(self, index):
-        return self._type_init(self.index_ptr(index))
+        raise NotImplementedError()
+
+    @property
+    def length(self):
+        raise NotImplementedError()
 
     def print_tree(self, name=None, depth=0):
         tab = '  ' * depth
         name_str = f'{name}: ' if name else ''
         print(
-            f'{tab}{name_str}{self.__class__.__name__}({hex(self.ptr)}) = size({self._size})'
+            f'{tab}{name_str}{self.__class__.__name__}({hex(self.ptr)}) = length({self.length})'
         )
-        for i in range(self._size):
+        for i in range(self.length):
             v = self.get(i)
             if isinstance(v, BaseModel):
                 v.print_tree(f'index({i})', depth + 1)
             else:
-                print(f'{tab}  index({i}): {v}({hex(self.index_ptr(i))})')
+                print(f'{tab}  index({i}): {v}')
+
+    def serialize(self):
+        return [self.unpack(self.get(i)) for i in range(self.length)]
 
 
-class GenericList(BaseModel):
+class Array(ListModel):
+    def __init__(self, pm, ptr, _type_init, item_size=None):
+        super().__init__(pm, ptr)
+        if item_size is None:
+            item_size = 0x4
+        if not self.is_initialized():
+            self._size = 0
+            self._first_ptr = 0
+            return
+        self._size = pm.read_int(ptr + 0xc)
+        self._type_init = _type_init
+        self.item_size = item_size
+        self._first_ptr = ptr + 0x10
+
+    def index_ptr(self, index):
+        return self._first_ptr + self.item_size * index
+
+    def get(self, index):
+        return self._type_init(self.index_ptr(index))
+
+    @property
+    def length(self):
+        return self._size
+
+
+class GenericLink(BaseModel):
+    '''
+    !! THIS IS JUST STRUCT. IGNORE BELOW !!
+    17b060f0 : System.Collections.Generic.Link
+        fields
+            8 : HashCode (type: System.Int32)
+            c : Next (type: System.Int32)
+    '''
+
+    def __init__(self, pm, ptr):
+        super().__init__(pm, ptr)
+        if not self.is_initialized():
+            self.HashCode = None
+            self.Next = None
+            return
+        self.HashCode = pm.read_int(ptr + 0x0)
+        self.Next = pm.read_int(ptr + 0x4)
+
+    def is_initialized(self):
+        return True
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + ['HashCode', 'Next']
+
+
+class GenericList(ListModel):
     '''
     6782578 : System.Collections.Generic.List`1[T]
         static fields
@@ -83,19 +146,25 @@ class GenericList(BaseModel):
             10 : _version (type: System.Int32)
     '''
 
-    def __init__(self, pm, ptr, _type_init):
+    def __init__(self, pm, ptr, _type_init, item_size=None):
         super().__init__(pm, ptr)
+        if item_size is None:
+            item_size = 0x4
         if not self.is_initialized():
             self._items = None
             self._size = 0
             self._version = None
             return
-        self._items = Array(pm, pm.read_int(ptr + 0x8), _type_init)
+        self._items = Array(pm, pm.read_int(ptr + 0x8), _type_init, item_size)
         self._size = pm.read_int(ptr + 0xc)
         self._version = pm.read_int(ptr + 0x10)
 
     def get(self, index):
         return self._items.get(index)
+
+    @property
+    def length(self):
+        return self._size
 
 
 class GenericDictionary(DataModel):
@@ -117,42 +186,42 @@ class GenericDictionary(DataModel):
             30 : generation (type: System.Int32)
     '''
 
-    def __init__(self, pm, ptr, key_type_init, value_type_init,
-                 maybe_max=None):
+    HASH_FLAG = -2147483648
+
+    def __init__(self, pm, ptr, key_type_init, value_type_init):
         super().__init__(pm, ptr)
         if not self.is_initialized():
+            self.linkSlots = None
             self.keySlots = None
             self.valueSlots = None
-            self.count = 0
-            self.maybe_max = 0
+            self.touchedSlots = 0
+            self.cached_data = None
             return
+        self.linkSlots = Array(pm, pm.read_int(ptr + 0xc),
+                               lambda inner_ptr: GenericLink(pm, inner_ptr),
+                               0x8)
         self.keySlots = Array(pm, pm.read_int(ptr + 0x10), key_type_init)
         self.valueSlots = Array(pm, pm.read_int(ptr + 0x14), value_type_init)
-        self.count = pm.read_int(ptr + 0x20)
-        self.maybe_max = maybe_max
-        print('---')
-        print(f'count: {self.count}')
-        self.keySlots.print_tree('keySlots')
-        self.valueSlots.print_tree('valueSlots')
-        print('---')
+        self.touchedSlots = pm.read_int(ptr + 0x18)
+        self.cached_data = None
 
     @property
     def value(self):
         if not self.is_initialized():
             return None
-        result = {}
+        if self.cached_data:
+            return self.cached_data
+        self.cached_data = {}
         _next = 0
-        _max = self.maybe_max if self.maybe_max else self.count
-        while (_next < _max):
+        while _next < self.touchedSlots:
             cur = _next
-            try:
+            if self.linkSlots.get(cur).is_initialized(
+            ) and self.linkSlots.get(cur).HashCode & self.HASH_FLAG != 0:
                 key = self.keySlots.get(cur)
                 value = self.valueSlots.get(cur)
-                result[key] = value
-            except Exception as e:
-                pass
+                self.cached_data[key] = value
             _next += 1
-        return result
+        return self.cached_data
 
     def print_tree(self, name=None, depth=0):
         tab = '  ' * depth
@@ -165,11 +234,17 @@ class GenericDictionary(DataModel):
             f'{tab}{name_str}{self.__class__.__name__}({hex(self.ptr)}) = size({len(value)})'
         )
         for key in value:
+            key_str = key
+            if isinstance(key, DataModel):
+                key_str = key.value
             v = value[key]
             if isinstance(v, BaseModel):
-                v.print_tree(f'key({key})', depth + 1)
+                v.print_tree(f'key({key_str})', depth + 1)
             else:
-                print(f'{tab}  key({key}): {v}')
+                print(f'{tab}  key({key_str}): {v}')
+
+    def serialize(self):
+        return {self.unpack(k): self.unpack(v) for k, v in self.value.items()}
 
 
 class SystemString(DataModel):
@@ -316,7 +391,7 @@ class DataModelFloat(DataModel):
         return self._value
 
 
-class DataModelList(BaseModel):
+class DataModelList(ListModel):
     '''
     17039198 : DataModelList
         fields
@@ -336,6 +411,10 @@ class DataModelList(BaseModel):
 
     def get(self, index):
         return self._list.get(index)
+
+    @property
+    def length(self):
+        return self._list.length()
 
 
 class UserManager(BaseModel):
@@ -358,6 +437,10 @@ class UserManager(BaseModel):
             return
         self._implementation = PCUserManager(pm, pm.read_int(ptr + 0x20))
 
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + ['_implementation']
+
 
 class PCUserManager(BaseModel):
     '''
@@ -377,6 +460,7 @@ class PCUserManager(BaseModel):
         super().__init__(pm, ptr)
         if not self.is_initialized():
             self._currentUser = None
+            self._currentUserIdModel = None
             self._users = None
             return
         self._currentUser = PCSteamUser(pm, pm.read_int(ptr + 0x1c))
@@ -384,6 +468,12 @@ class PCUserManager(BaseModel):
         self._users = Array(
             pm, pm.read_int(ptr + 0x24),
             lambda inner_ptr: PCSteamUser(pm, pm.read_int(inner_ptr)))
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + [
+            '_currentUser', '_currentUserIdModel', '_users'
+        ]
 
 
 class PCSteamUser(BaseModel):
@@ -415,6 +505,12 @@ class PCSteamUser(BaseModel):
         self._id = SystemString(pm, pm.read_int(ptr + 0x18))
         self._username = SystemString(pm, pm.read_int(ptr + 0x1c))
         self._steamId = CSteamID(pm, pm.read_int(ptr + 0x20))
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + [
+            'gameStats', '_name', '_id', '_username', '_steamId'
+        ]
 
 
 class TournamentResultsItem(BaseModel):
@@ -464,6 +560,14 @@ class TournamentResultsItem(BaseModel):
         self._cupWon = pm.read_bytes(ptr + 0x40, 1) == '\x01'
         self._online = pm.read_bytes(ptr + 0x41, 1) == '\x01'
         self._animateMedals = pm.read_bytes(ptr + 0x42, 1) == '\x01'
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + [
+            '_targetScore', '_rankings', '_playerName', '_wizardId',
+            '_overtimeMedals', '_cupType', '_cupWon', '_online',
+            '_animateMedals'
+        ]
 
 
 class BasePopup(BaseModel):
@@ -536,17 +640,17 @@ class AbstractTournamentResultsPopup(BasePopup):
             self._netPlayers = None
             return
         self._tournamentResults = GenericDictionary(
-            pm, ptr + 0x2c,
+            pm, pm.read_int(ptr + 0x2c),
             lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)),
-            lambda inner_ptr: GenericList(pm, pm.read_int(inner_ptr), lambda inner_ptr: PlayerMatchResult(pm, pm.read_int(inner_ptr))))
+            lambda inner_ptr: GenericList(pm, pm.read_int(inner_ptr), lambda inner_inner_ptr: PlayerMatchResult(pm, inner_inner_ptr), 0x8))
         self._tournamentResultItems = GenericDictionary(
-            pm, ptr + 0x30,
+            pm, pm.read_int(ptr + 0x30),
             lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)),
             lambda inner_ptr: TournamentResultsItem(pm, pm.read_int(inner_ptr))
         )
-        # self._controllerIds = GenericList(
-        #     pm, ptr + 0x34,
-        #     lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)))
+        self._controllerIds = GenericList(
+            pm, ptr + 0x34,
+            lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)))
         self._targetScore = pm.read_int(ptr + 0x58)
         # self._wizardIds = GenericList(
         #     pm, ptr + 0x48,
@@ -554,9 +658,17 @@ class AbstractTournamentResultsPopup(BasePopup):
         self._winningControllerId = SystemString(pm, pm.read_int(ptr + 0x4c))
         self._cupType = SystemString(pm, pm.read_int(ptr + 0x50))
         self._animationCompleted = pm.read_bytes(ptr + 0x5c, 1) == '\x01'
-        # self._netPlayers = GenericList(
-        #     pm, ptr + 0x54,
-        #     lambda inner_ptr: NetPlayerAtStartup(pm, pm.read_int(inner_ptr)))
+        self._netPlayers = GenericList(
+            pm, ptr + 0x54,
+            lambda inner_ptr: NetPlayerAtStartup(pm, pm.read_int(inner_ptr)))
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + [
+            '_tournamentResults', '_tournamentResultItems', '_controllerIds',
+            '_targetScore', '_wizardIds', '_winningControllerId', '_cupType',
+            '_animationCompleted', '_netPlayers'
+        ]
 
 
 class TournamentResultsPopup(AbstractTournamentResultsPopup):
@@ -645,6 +757,10 @@ class TournamentCurrentScorePopup(AbstractTournamentResultsPopup):
         self._open = pm.read_bytes(ptr + 0x60, 1) == '\x01'
         self._previousPlayerCount = pm.read_int(ptr + 0x64)
 
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + ['_open', '_previousPlayerCount']
+
 
 class SelectModel(BaseModel):
     '''
@@ -665,6 +781,10 @@ class SelectModel(BaseModel):
         self.id = SystemString(pm, pm.read_int(ptr + 0x8))
         self.name = SystemString(pm, pm.read_int(ptr + 0xc))
         self.resourceName = SystemString(pm, pm.read_int(ptr + 0x10))
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + ['id', 'name', 'resourceName']
 
 
 class GameTypeFlowModel(SelectModel):
@@ -691,6 +811,10 @@ class GameTypeFlowModel(SelectModel):
 
     def is_single_match(self):
         return self.name.value == self.ID_QUICK_MATCH
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + ['selectable']
 
 
 class GameTypeModel(SelectModel):
@@ -719,9 +843,9 @@ class GameTypeModel(SelectModel):
             self.type = None
             self.startState = None
             return
-        # self.worlds = GenericList(
-        #     pm, pm.read_int(ptr + 0x14),
-        #     lambda inner_ptr: SelectModel(pm, pm.read_int(inner_ptr)))
+        self.worlds = GenericList(
+            pm, pm.read_int(ptr + 0x14),
+            lambda inner_ptr: SelectModel(pm, pm.read_int(inner_ptr)))
         self.type = SystemString(pm, pm.read_int(ptr + 0x18))
         self.startState = SystemString(pm, pm.read_int(ptr + 0x1c))
 
@@ -730,6 +854,10 @@ class GameTypeModel(SelectModel):
 
     def is_online_multiplayer(self):
         return self.type.value == self.TYPE_MULTIPLAYER_ONLINE
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + ['worlds', 'type', 'startState']
 
 
 class GameStats(BaseModel):
@@ -857,9 +985,25 @@ class GameStats(BaseModel):
         self.eloScoreBracket = DataModelInt(pm, pm.read_int(ptr + 0x98))
         self.eloScoreDelta = DataModelInt(pm, pm.read_int(ptr + 0x9c))
 
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + [
+            'levelId', 'worldId', 'levelType', 'levelWon', 'towerHeight',
+            'brickCount', 'time', 'fastestNormalRaceTime', 'timesMagicUsed',
+            'roofUpsideDown', 'moonDropped', 'finished', 'bricksDropped',
+            'bricksPlaced', 'numberOfRotates', 'waveNumber',
+            'highestWaveNumber', 'primaryUser', 'numPlayers', 'gameQuit',
+            'isHost', 'spellsUsed', 'medalCount', 'health',
+            'maxIvyBricksConnected', 'bubblesStabilized', 'spellsPickedUp',
+            'timeLeft', 'sessionCreated', 'sessionJoined', 'sessionTimedOut',
+            'sessionStarted', 'sessionFull', 'sessionJoinTryCount', 'eloScore',
+            'eloScoreBracket', 'eloScoreDelta'
+        ]
+
 
 class PlayerMatchResult(BaseModel):
     '''
+    !! THIS IS JUST STRUCT. IGNORE BELOW !!
     17a47ea8 : PlayerMatchResult
         fields
             8 : rank (type: System.Int32)
@@ -872,8 +1016,15 @@ class PlayerMatchResult(BaseModel):
             self.rank = None
             self.difficulty = None
             return
-        self.rank = pm.read_int(ptr + 0x8)
-        self.difficulty = SystemString(pm, pm.read_int(ptr + 0xc))
+        self.rank = pm.read_int(ptr + 0x0)
+        self.difficulty = SystemString(pm, pm.read_int(ptr + 0x4))
+
+    def is_initialized(self):
+        return True
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + ['rank', 'difficulty']
 
 
 class WorldModel(SelectModel):
@@ -902,11 +1053,15 @@ class WorldModel(SelectModel):
             self.unlocked = None
             return
         self.type = SystemString(pm, pm.read_int(ptr + 0x14))
-        # self.gameModes = GenericList(
-        #     pm, pm.read_int(ptr + 0x18),
-        #     lambda inner_ptr: SelectModel(pm, pm.read_int(inner_ptr)))
+        self.gameModes = GenericList(
+            pm, pm.read_int(ptr + 0x18),
+            lambda inner_ptr: SelectModel(pm, pm.read_int(inner_ptr)))
         self.medalCost = pm.read_int(ptr + 0x1c)
         self.unlocked = pm.read_bytes(ptr + 0x20, 1) == '\x01'
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + ['type', 'gameModes', 'medalCost', 'unlocked']
 
 
 class GameModeModel(SelectModel):
@@ -944,7 +1099,11 @@ class GameModeModel(SelectModel):
             return
         self.explanationId = SystemString(pm, pm.read_int(ptr + 0x18))
         self.type = SystemString(pm, pm.read_int(ptr + 0x1c))
-        # self.parentWorld = WorldModel(pm, pm.read_int(ptr + 0x20))
+        self.parentWorld = WorldModel(pm, pm.read_int(ptr + 0x20))
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + ['explanationId', 'type', 'parentWorld']
 
 
 class NetPlayer(BaseModel):
@@ -1014,6 +1173,14 @@ class NetPlayer(BaseModel):
         self._steamId = pm.read_ulonglong(ptr + 0x60)
         self._eloScore = pm.read_int(ptr + 0x68)
 
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + [
+            '_id', 'destroying', 'numActionsLastGame', '_user', '_username',
+            '_status', '_wizardId', '_brickPackId', '_level', '_steamId',
+            '_eloScore'
+        ]
+
 
 class NetPlayerAtStartup(BaseModel):
     '''
@@ -1047,6 +1214,13 @@ class NetPlayerAtStartup(BaseModel):
         self.id = SystemString(pm, pm.read_int(ptr + 0x10))
         self.steamId = pm.read_ulonglong(ptr + 0x20)
 
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + [
+            'netPlayer', 'username', 'wizardId', 'level', 'eloScore', 'id',
+            'steamId'
+        ]
+
 
 class PlayerRankStruct(BaseModel):
     '''
@@ -1067,6 +1241,10 @@ class PlayerRankStruct(BaseModel):
         self.player = NetPlayer(pm, pm.read_int(ptr + 0x8))
         self.rank = pm.read_int(ptr + 0xc)
         self.experience = pm.read_int(ptr + 0x10)
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + ['player', 'rank', 'experience']
 
 
 class AbstractMultiplayerGameTypeFlowController(BaseModel):
@@ -1093,6 +1271,10 @@ class AbstractMultiplayerGameTypeFlowController(BaseModel):
             return
         self.allowRetry = pm.read_bytes(ptr + 0x8, 1) == '\x01'
         self.finished = pm.read_bytes(ptr + 0x24, 1) == '\x01'
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + ['allowRetry', 'finished']
 
 
 class CupMatchFlowController(AbstractMultiplayerGameTypeFlowController):
@@ -1154,10 +1336,10 @@ class CupMatchFlowController(AbstractMultiplayerGameTypeFlowController):
             self._friendsMatch = None
             self._overtime = None
             return
-        # self._resultsByPlayer = GenericDictionary(
-        #     pm, ptr + 0x28,
-        #     lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)),
-        #     lambda inner_ptr: GenericList(pm, pm.read_int(inner_ptr), lambda inner_ptr: PlayerMatchResult(pm, pm.read_int(inner_ptr))))
+        self._resultsByPlayer = GenericDictionary(
+            pm, pm.read_int(ptr + 0x28),
+            lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)),
+            lambda inner_ptr: GenericList(pm, pm.read_int(inner_ptr), lambda inner_ptr: PlayerMatchResult(pm, inner_ptr), 0x8))
         self._controllerIds = GenericList(
             pm, pm.read_int(ptr + 0x2c),
             lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)))
@@ -1165,13 +1347,18 @@ class CupMatchFlowController(AbstractMultiplayerGameTypeFlowController):
             pm, pm.read_int(ptr + 0x2c),
             lambda inner_ptr: pm.read_int(inner_ptr))
         self._targetScore = pm.read_int(ptr + 0x60)
-        # self._tournamentResultsPopup = TournamentResultsPopup(pm, pm.read_int(ptr + 0x34))
+        self._tournamentResultsPopup = TournamentResultsPopup(
+            pm, pm.read_int(ptr + 0x34))
         # self._tournamentWinnerPopup = TournamentWinnerPopup(pm, pm.read_int(ptr + 0x38))
         # self._levelUpdatePopup = LevelUpdatePopup(pm, pm.read_int(ptr + 0x3c))
         # self._winningGameController = AbstractGameController(pm, pm.read_int(ptr + 0x40))
-        # self._gameModes = GenericList(pm, pm.read_int(ptr + 0x44), lambda inner_ptr: GameModeModel(pm, pm.read_int(inner_ptr)))
+        self._gameModes = GenericList(
+            pm, pm.read_int(ptr + 0x44),
+            lambda inner_ptr: GameModeModel(pm, pm.read_int(inner_ptr)))
         self._cupType = SystemString(pm, pm.read_int(ptr + 0x48))
-        # self._netPlayersStartup = GenericList(pm, pm.read_int(ptr + 0x4c), lambda inner_ptr: NetPlayerAtStartup(pm, pm.read_int(inner_ptr)))
+        self._netPlayersStartup = GenericList(
+            pm, pm.read_int(ptr + 0x4c),
+            lambda inner_ptr: NetPlayerAtStartup(pm, pm.read_int(inner_ptr)))
         self._defaultWin = pm.read_bytes(ptr + 0x64, 1) == '\x01'
         self._playerRanks = GenericList(
             pm, pm.read_int(ptr + 0x54),
@@ -1181,6 +1368,17 @@ class CupMatchFlowController(AbstractMultiplayerGameTypeFlowController):
         self._ownRank = PlayerRankStruct(pm, pm.read_int(ptr + 0x5c))
         self._friendsMatch = pm.read_bytes(ptr + 0x66, 1) == '\x01'
         self._overtime = pm.read_bytes(ptr + 0x67, 1) == '\x01'
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + [
+            '_resultsByPlayer', '_controllerIds', '_wizardIdsByPlayer',
+            '_targetScore', '_tournamentResultsPopup',
+            '_tournamentWinnerPopup', '_levelUpdatePopup',
+            '_winningGameController', '_gameModes', '_cupType',
+            '_netPlayersStartup', '_defaultWin', '_playerRanks', '_autoNext',
+            '_gameType', '_ownRank', '_friendsMatch', '_overtime'
+        ]
 
 
 class SingleLocalMatchFlowController(
@@ -1253,11 +1451,29 @@ class GameSetupData(BaseModel):
     def __init__(self, pm, ptr):
         super().__init__(pm, ptr)
         if not self.is_initialized():
+            self.gameType = None
+            self.world = None
+            self.gameMode = None
+            self.gameModes = None
+            self.inputs = None
+            self.wizardIds = None
+            self.brickPacks = None
+            self.selectedWizardIds = None
+            self.selectedBrickPacks = None
+            self.retry = None
+            self.showModeTitle = None
+            self.gameTypeFlowModel = None
+            self.gameTypeFlow = None
+            self.randomSeed = None
+            self.inviteIds = None
+            self.privateGame = None
             return
         self.gameType = GameTypeModel(pm, pm.read_int(ptr + 0x8))
         self.world = WorldModel(pm, pm.read_int(ptr + 0xc))
         self.gameMode = GameModeModel(pm, pm.read_int(ptr + 0x10))
-        # self.gameModes = GenericList(pm, pm.read_int(ptr + 0x14), lambda inner_ptr: GameModeModel(pm, pm.read_int(inner_ptr)))
+        self.gameModes = GenericList(
+            pm, pm.read_int(ptr + 0x14),
+            lambda inner_ptr: GameModeModel(pm, pm.read_int(inner_ptr)))
         self.inputs = Array(
             pm, pm.read_int(ptr + 0x20),
             lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)))
@@ -1301,6 +1517,16 @@ class GameSetupData(BaseModel):
             lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)))
         self.privateGame = pm.read_bytes(ptr + 0x4c, 1) == b'\x01'
 
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + [
+            'gameType', 'world', 'gameMode', 'gameModes', 'inputs',
+            'wizardIds', 'brickPacks', 'selectedWizardIds',
+            'selectedBrickPacks', 'retry', 'showModeTitle',
+            'gameTypeFlowModel', 'gameTypeFlow', 'randomSeed', 'inviteIds',
+            'privateGame'
+        ]
+
 
 class AbstractGameTypeController(BaseModel):
     '''
@@ -1341,8 +1567,13 @@ class AbstractGameTypeController(BaseModel):
             self._inputs = None
             self._finishGame = None
             return
-        # self._inputs = Array(pm, ptr + 0x1c, lambda inner_ptr: SystemString(pm, inner_ptr))
-        # self._finishGame = pm.read_bytes(ptr + 0x60, 1) == b'\x01'
+        self._inputs = Array(pm, ptr + 0x1c,
+                             lambda inner_ptr: SystemString(pm, inner_ptr))
+        self._finishGame = pm.read_bytes(ptr + 0x60, 1) == b'\x01'
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + ['_inputs', '_finishGame']
 
 
 class AbstractMultiplayerGameTypeController(AbstractGameTypeController):
@@ -1381,7 +1612,8 @@ class AbstractMultiplayerGameTypeController(AbstractGameTypeController):
     pass
 
 
-class OnlineMultiplayerGameTypeController(AbstractMultiplayerGameTypeController):
+class OnlineMultiplayerGameTypeController(
+        AbstractMultiplayerGameTypeController):
     '''
     1716f180 : AbstractGameTypeController
         static fields
@@ -1483,6 +1715,14 @@ class OnlineMultiplayerGameTypeController(AbstractMultiplayerGameTypeController)
             pm, pm.read_int(ptr + 0xd0),
             lambda inner_ptr: NetPlayerAtStartup(pm, pm.read_int(inner_ptr)))
 
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + [
+            '_gameInfoPopup', '_initialized', '_setupCompleted',
+            '_allGameControllersReady', '_startGameCalled', '_gamePlaying',
+            '_gameWon', '_netPlayersStartup'
+        ]
+
 
 class GameStateController(BaseModel):
     '''
@@ -1522,9 +1762,13 @@ class GameStateController(BaseModel):
             return
         self._gameSetup = GameSetupData(pm, pm.read_int(ptr + 0x24))
 
-        self._gameTypeController = None
-        if self._gameSetup and hasattr(
-                self._gameSetup, 'gameType') and self._gameSetup.gameType:
-            if self._gameSetup.gameType.is_online_multiplayer():
-                self._gameTypeController = OnlineMultiplayerGameTypeController(
-                    pm, pm.read_int(ptr + 0x20))
+        # self._gameTypeController = None
+        # if self._gameSetup and hasattr(
+        #         self._gameSetup, 'gameType') and self._gameSetup.gameType:
+        #     if self._gameSetup.gameType.is_online_multiplayer():
+        #         self._gameTypeController = OnlineMultiplayerGameTypeController(
+        #             pm, pm.read_int(ptr + 0x20))
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + ['_gameSetup', '_gameTypeController']
