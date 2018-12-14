@@ -658,7 +658,7 @@ class AbstractTournamentResultsPopup(BasePopup):
             lambda inner_ptr: TournamentResultsItem(pm, pm.read_int(inner_ptr))
         )
         self._controllerIds = GenericList(
-            pm, ptr + 0x34,
+            pm, pm.read_int(ptr + 0x34),
             lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)))
         self._targetScore = pm.read_int(ptr + 0x58)
         # self._wizardIds = GenericList(
@@ -668,7 +668,7 @@ class AbstractTournamentResultsPopup(BasePopup):
         self._cupType = SystemString(pm, pm.read_int(ptr + 0x50))
         self._animationCompleted = pm.read_bytes(ptr + 0x5c, 1) == '\x01'
         self._netPlayers = GenericList(
-            pm, ptr + 0x54,
+            pm, pm.read_int(ptr + 0x54),
             lambda inner_ptr: NetPlayerAtStartup(pm, pm.read_int(inner_ptr)))
 
     @classmethod
@@ -1713,7 +1713,7 @@ class OnlineMultiplayerGameTypeController(
             self._gameWon = None
             self._netPlayersStartup = None
             return
-        self._gameInfoPopup = TournamentCurrentScorePopup(pm, ptr + 0xac)
+        self._gameInfoPopup = TournamentCurrentScorePopup(pm, pm.read_int(ptr + 0xac))
         self._initialized = pm.read_bytes(ptr + 0xd8, 1) == '\x01'
         self._setupCompleted = pm.read_bytes(ptr + 0xd9, 1) == '\x01'
         self._allGameControllersReady = pm.read_bytes(ptr + 0xda, 1) == '\x01'
