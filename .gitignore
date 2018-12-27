@@ -1,4 +1,4 @@
-scan/
+dev-resources/
 *.CT
 .vscode/
 __pycache__/
