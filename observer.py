@@ -7,12 +7,19 @@ from pymem.exception import MemoryReadError, ProcessNotFound, WinAPIError, Proce
 from memory_parser import parse
 from time import sleep
 from sys import exit as _exit
-
+from traceback import format_exc
 config = Config()
 
 HOST = config.get('Observer', 'host')
 PORT = int(config.get('Observer', 'port'))
 DELAY = float(config.get('Observer', 'delay'))
+DEBUG = config.get('Observer', 'debug') == 'true'
+
+
+def log(text):
+    if DEBUG:
+        print(text)
+
 
 if __name__ == '__main__':
     while True:
@@ -25,6 +32,7 @@ if __name__ == '__main__':
 
                     data = parse(pm)
                     socketIO.emit('json', data)
+                    # _exit(0)
 
                     end = default_timer()
 
@@ -34,11 +42,15 @@ if __name__ == '__main__':
                         sleep(DELAY - delayed)
         except MemoryReadError as e:
             print(f'[!] Tricky Towers is may not running: {repr(e)}')
+            log(format_exc())
         except ProcessNotFound as e:
             print(f'[!] Tricky Towers is not running: {repr(e)}')
+            log(format_exc())
         except WinAPIError as e:
             print(f'[!] Tricky Towers is may not running: {repr(e)}')
+            log(format_exc())
         except ProcessError as e:
             print(f'[!] Tricky Towers is seems to opening now: {repr(e)}')
+            log(format_exc())
         except KeyboardInterrupt as e:
             _exit(0)
