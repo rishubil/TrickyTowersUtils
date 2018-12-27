@@ -42,7 +42,11 @@ class BaseModel:
 
     def is_initialized(self):
         '''아마도 동작할 것'''
-        return self.ptr != 0x0 and self.pm.read_uint(self.ptr + 0x4) == 0
+        try:
+            return self.ptr != 0x0 and self.pm.read_uint(self.ptr + 0x4) == 0
+        except Exception as e:
+            # raise RuntimeError(f'Cannot check is_initialized for address {hex(self.ptr)}') from e
+            return False
 
 
 class DataModel(BaseModel):
@@ -1771,13 +1775,60 @@ class GameStateController(BaseModel):
             return
         self._gameSetup = GameSetupData(pm, pm.read_int(ptr + 0x24))
 
+        # has_game_type = self._gameSetup and hasattr(
+        #         self._gameSetup, 'gameType') and self._gameSetup.gameType
+        # has_game_type_flow_model = self._gameSetup and hasattr(
+        #         self._gameSetup, 'gameTypeFlowModel') and self._gameSetup.gameTypeFlowModel
         # self._gameTypeController = None
-        # if self._gameSetup and hasattr(
-        #         self._gameSetup, 'gameType') and self._gameSetup.gameType:
-        #     if self._gameSetup.gameType.is_online_multiplayer():
-        #         self._gameTypeController = OnlineMultiplayerGameTypeController(
-        #             pm, pm.read_int(ptr + 0x20))
+        # if has_game_type and has_game_type_flow_model and self._gameSetup.gameType.is_online_multiplayer() and not self._gameSetup.gameTypeFlowModel.is_single_match():
+        #     self._gameTypeController = OnlineMultiplayerGameTypeController(
+        #         pm, pm.read_int(ptr + 0x20))
+        # else:
+        #     self._gameTypeController = AbstractMultiplayerGameTypeController(
+        #         pm, pm.read_int(ptr + 0x20))
 
     @classmethod
     def attrs(cls):
         return super().attrs() + ['_gameSetup', '_gameTypeController']
+
+class GameInfoPopup(BasePopup):
+    '''
+    1702eea0 : BasePopup
+        fields
+            8 : close (type: System.Action<BasePopup>)
+            c : <skin>k__BackingField (type: UnityEngine.GameObject)
+            10 : _inputLayer (type: InputActionLayer)
+            14 : _container (type: UnityEngine.GameObject)
+            18 : _tweener (type: DG.Tweening.Tweener)
+            1c : _canvasGroup (type: UnityEngine.CanvasGroup)
+            20 : _popupPosition (type: UnityEngine.RectTransform)
+            24 : _autoCleanup (type: System.Boolean)
+            25 : _useMoveInTween (type: System.Boolean)
+            26 : _cursorWasVisible (type: System.Boolean)
+            27 : _showCursor (type: System.Boolean)
+    17aaca50 : GameInfoPopup
+        fields
+            28 : _gameModeModel (type: GameModeModel)
+            2c : _itemContainer (type: UnityEngine.GameObject)
+            30 : _netPlayers (type: System.Collections.Generic.List<NetPlayerAtStartup>)
+            34 : _items (type: System.Collections.Generic.List<PlayerOverviewItem>)
+            3c : _open (type: System.Boolean)
+            38 : _updateHelper (type: UpdateHandler)
+            40 : _previousPlayerCount (type: System.Int32)
+
+    '''
+
+    def __init__(self, pm, ptr):
+        super().__init__(pm, ptr)
+        if not self.is_initialized():
+            self._netPlayers = None
+            return
+        self._netPlayers = GenericList(
+            pm, pm.read_int(ptr + 0x30),
+            lambda inner_ptr: NetPlayerAtStartup(pm, pm.read_int(inner_ptr)))
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + [
+            '_netPlayers'
+        ]
