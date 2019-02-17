@@ -26,6 +26,7 @@ def try_get_value(obj, *args):
 
 def parse(pm):
     useful_data = {}
+    # todo: handle follow_module_ptr memory read error
     is_playing_ptr = follow_module_ptr(pm, 'TrickyTowers.exe', 0x01010BD0, 0x8)
     is_finished_ptr = follow_module_ptr(pm, 'TrickyTowers.exe', 0x010494D8,
                                         0x1C, 0x59C, 0x214, 0x48, 0x228)

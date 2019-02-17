@@ -2,6 +2,7 @@
 
 * {
     font-family: 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
 }
 
 p {
@@ -11,6 +12,10 @@ p {
 body {
     margin: 0;
     overflow-y: hidden;
+}
+
+.hidden {
+    opacity: 0;
 }
 
 #toast {
@@ -44,6 +49,18 @@ body {
     max-height: 100%;
 }
 
+.player-names {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 4.5vw;
+    -webkit-animation-duration: 1s;
+    animation-duration: 1s;
+    -webkit-animation-fill-mode: both;
+    animation-fill-mode: both;
+}
+
 .player-name-box {
     width: 16.3vw;
     height: 4.5vw;
@@ -69,6 +86,16 @@ body {
     font-weight: 700;
 }
 
+.player-name-box.highlight .name {
+    animation-iteration-count: infinite;
+    -webkit-animation-name: bigPulse;
+    animation-name: bigPulse;
+    -webkit-animation-duration: 1s;
+    animation-duration: 1s;
+    -webkit-animation-fill-mode: both;
+    animation-fill-mode: both;
+}
+
 .player-names.p4 .player-name-box:nth-child(1) {
     left: 12.6vw;
     display: block;
@@ -87,4 +114,63 @@ body {
 .player-names.p4 .player-name-box:nth-child(4) {
     left: 81.75vw;
     display: block;
+}
+
+.player-names.p3 .player-name-box:nth-child(1) {
+    left: 16.5vw;
+    display: block;
+}
+
+.player-names.p3 .player-name-box:nth-child(2) {
+    left: 47.3vw;
+    display: block;
+}
+
+.player-names.p3 .player-name-box:nth-child(3) {
+    left: 77.9vw;
+    display: block;
+}
+
+.player-names.p2 .player-name-box:nth-child(1) {
+    left: 24.2vw;
+    display: block;
+}
+
+.player-names.p2 .player-name-box:nth-child(2) {
+    left: 70.3vw;
+    display: block;
+}
+
+@-webkit-keyframes bigPulse {
+    from {
+        -webkit-transform: scale3d(1, 1, 1);
+        transform: scale3d(1, 1, 1);
+    }
+
+    50% {
+        -webkit-transform: scale3d(1.2, 1.2, 1.2);
+        transform: scale3d(1.2, 1.2, 1.2);
+    }
+
+    to {
+        -webkit-transform: scale3d(1, 1, 1);
+        transform: scale3d(1, 1, 1);
+    }
+    }
+
+    @keyframes bigPulse {
+    from {
+        -webkit-transform: scale3d(1, 1, 1);
+        transform: scale3d(1, 1, 1);
+    }
+
+    50% {
+        -webkit-transform: scale3d(1.2, 1.2, 1.2);
+        transform: scale3d(1.2, 1.2, 1.2);
+    }
+
+    to {
+        -webkit-transform: scale3d(1, 1, 1);
+        transform: scale3d(1, 1, 1);
+    }
 }

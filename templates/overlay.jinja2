@@ -4,13 +4,16 @@
   <meta charset="utf-8">
   <title>Overlay for Tricky Towers</title>
   <style></style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/animate.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/overlay.css') }}">
 </head>
 <body>
   <div id="overlayContainer">
     <img class="bg" src="{{ url_for('static', filename='img/test4.jpg') }}"/>
-    <div class="player-names p4">
-      <div class="player-name-box"><div class="name"><p>Player 1</p></div></div>
+    {# <img class="bg" src="{{ url_for('static', filename='img/test3.jpg') }}"/> #}
+    {# <img class="bg" src="{{ url_for('static', filename='img/test2.jpg') }}"/> #}
+    <div class="player-names hidden p4">
+      <div class="player-name-box highlight"><div class="name"><p>Nesswit</p></div></div>
       <div class="player-name-box"><div class="name"><p>KoreanTrickyTowersUnion</p></div></div>
       <div class="player-name-box"><div class="name"><p>SHRT</p></div></div>
       <div class="player-name-box"><div class="name"><p>?</p></div></div>
@@ -26,6 +29,7 @@
   </div>
   <script src="{{ url_for('static', filename='js/socket.io.js') }}"></script>
   <script src="{{ url_for('static', filename='js/fitty.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/lodash.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/overlay.js') }}"></script>
 </body>
 </html>
