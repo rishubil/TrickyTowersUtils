@@ -3,9 +3,10 @@
 
 node_modules/
 __pycache__/
+.cache/
 
 dev-resources/
 *.CT
 
 config.ini
-.cache/
+static/dist/
