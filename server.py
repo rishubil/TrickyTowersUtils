@@ -9,15 +9,20 @@ from config import Config
 
 config = Config()
 
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    static_url_path='',
+    template_folder='static/dist',
+    static_folder='static/dist')
 app.config['SECRET_KEY'] = config.get('Server', 'secret_key')
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 socketio = SocketIO(app)
 
 
 @app.route('/')
 @app.route('/overlay')
 def overlay():
-    return render_template('overlay.jinja2')
+    return render_template('index.html')
 
 
 @app.route('/overlay_config.json')

@@ -60,7 +60,7 @@ def parse(pm):
         useful_data['game_type'] = game_type.type.value
 
     game_type_flow = try_get_value(game_state_controller, '_gameSetup',
-                                   'gameTypeFlow')
+                                    'gameTypeFlow')
 
     net_player_startups = None
     if isinstance(game_type_flow, models.CupMatchFlowController):
@@ -82,7 +82,7 @@ def parse(pm):
             username = try_get_value(net_player_startup, 'username')
             if username.value:
                 printable_username = username.value.encode('utf8',
-                                                           'replace').decode()
+                                                            'replace').decode()
             useful_data['players'][i]['username'] = printable_username
 
             _id = try_get_value(net_player_startup, 'id')

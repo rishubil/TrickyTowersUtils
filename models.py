@@ -211,8 +211,8 @@ class GenericDictionary(DataModel):
             self.cached_data = None
             return
         self.linkSlots = Array(pm, pm.read_int(ptr + 0xc),
-                               lambda inner_ptr: GenericLink(pm, inner_ptr),
-                               0x8)
+                                lambda inner_ptr: GenericLink(pm, inner_ptr),
+                                0x8)
         self.keySlots = Array(pm, pm.read_int(ptr + 0x10), key_type_init)
         self.valueSlots = Array(pm, pm.read_int(ptr + 0x14), value_type_init)
         self.touchedSlots = pm.read_int(ptr + 0x18)
@@ -1491,7 +1491,7 @@ class GameSetupData(BaseModel):
             pm, pm.read_int(ptr + 0x20),
             lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)))
         self.wizardIds = Array(pm, pm.read_int(ptr + 0x24),
-                               lambda inner_ptr: pm.read_int(inner_ptr))
+                                lambda inner_ptr: pm.read_int(inner_ptr))
         self.brickPacks = Array(
             pm, pm.read_int(ptr + 0x28),
             lambda inner_ptr: SystemString(pm, pm.read_int(inner_ptr)))
@@ -1581,7 +1581,7 @@ class AbstractGameTypeController(BaseModel):
             self._finishGame = None
             return
         self._inputs = Array(pm, ptr + 0x1c,
-                             lambda inner_ptr: SystemString(pm, inner_ptr))
+                            lambda inner_ptr: SystemString(pm, inner_ptr))
         self._finishGame = pm.read_bytes(ptr + 0x60, 1) == b'\x01'
 
     @classmethod

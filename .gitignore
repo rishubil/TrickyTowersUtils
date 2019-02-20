@@ -1,6 +1,11 @@
+.vscode/
+.idea/
+
+node_modules/
+__pycache__/
+
 dev-resources/
 *.CT
-.vscode/
-__pycache__/
+
 config.ini
-.idea/
+.cache/

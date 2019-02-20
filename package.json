@@ -1,0 +1,22 @@
+{
+  "devDependencies": {
+    "@vue/component-compiler-utils": "^2.5.2",
+    "eclint": "^2.8.1",
+    "parcel-bundler": "^1.11.0",
+    "vue-template-compiler": "^2.6.6"
+  },
+  "dependencies": {
+    "vue": "^2.6.6",
+    "vue-hot-reload-api": "^2.3.2"
+  },
+  "license": "MIT",
+  "scripts": {
+    "ec-fix": "eclint fix *",
+    "ec-check": "eclint check *",
+    "watch": "parcel watch static/src/index.html -d static/dist",
+    "build": "parcel build static/src/index.html -d static/dist"
+  },
+  "alias": {
+    "vue": "./node_modules/vue/dist/vue.common.js"
+  }
+}
