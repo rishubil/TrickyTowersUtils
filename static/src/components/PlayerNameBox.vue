@@ -59,7 +59,7 @@ export default {
     });
   },
   beforeDestroy() {
-    window.removeEventListener("resize", this.debouncedUpdateFitty);
+    window.removeEventListener("resize", this.debouncedUpdateFitty, true);
     this.removeFitty();
   }
 };

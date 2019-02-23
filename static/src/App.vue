@@ -76,7 +76,7 @@ export default {
       this.socket.on("connect", function() {
         console.info("Connected to server");
       });
-      this.socket.on("json", function(data) {
+      this.socket.on("json", data => {
         this.gamedata = data;
       });
       this.socket.on("disconnect", function() {
