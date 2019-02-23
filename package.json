@@ -10,6 +10,7 @@
     "fitty": "^2.2.6",
     "lodash": "^4.17.11",
     "socket.io": "^2.2.0",
+    "uuid": "^3.3.2",
     "vue": "^2.6.6",
     "vue-hot-reload-api": "^2.3.2"
   },

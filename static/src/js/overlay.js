@@ -125,45 +125,8 @@ function getConfig() {
   request.send();
 }
 
-function initSocket() {
-  var socket = io.connect('http://' + document.domain + ':' + location.port);
-  socket.on('connect', function () {
-    console.log('socket connected');
-    hideMessage('socketNotConnectedMsgBox');
-  });
-  socket.on('json', function (data) {
-    updateData(data);
-  });
-  socket.on('disconnect', function () {
-    console.log('socket disconnected');
-    showMessage('socketNotConnectedMsgBox');
-  });
-}
-
-function initFitty() {
-  document.fonts.ready.then(function () {
-    fitty.observeWindow = false;
-    var nameFittys = null;
-    function SetFitty() {
-      nameFittys = fitty('.player-name-box .name > p', {
-        minSize: vwToPx(0.8),
-        maxSize: vwToPx(1.6),
-        multiLine: false,
-        observeWindow: false
-      });
-    }
-    SetFitty();
-    window.addEventListener('resize', _.debounce(function () {
-      for (var i = 0; i < nameFittys.length; i++) {
-        nameFittys[i].unsubscribe();
-      }
-      SetFitty();
-    }, 200), true);
-  });
-}
-
 ready(function () {
-  initFitty();
+
   getConfig();
   initSocket();
 });

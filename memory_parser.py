@@ -38,8 +38,10 @@ def parse(pm):
     game_info_popup_ptr = follow_module_ptr(pm, 'mono.dll', 0x1F40AC, 0x1B4,
                                             0x10, 0x2C, 0x48, 0x20, 0xAC, 0x0)
 
-    useful_data['is_playing'] = pm.read_short(is_playing_ptr) == 1
-    useful_data['is_finished'] = pm.read_short(is_finished_ptr) == 1
+    useful_data['game_info'] = {}
+    useful_data['game_info']['is_playing'] = pm.read_short(is_playing_ptr) == 1
+    useful_data['game_info']['is_finished'] = pm.read_short(
+        is_finished_ptr) == 1
 
     game_state_controller = models.GameStateController(
         pm, game_state_controller_ptr)
@@ -53,25 +55,25 @@ def parse(pm):
     if game_mode and game_mode.is_initialized():
         game_mode_id = try_get_value(game_mode, 'id')
         if game_mode_id and game_mode_id.is_initialized():
-            useful_data['game_mode'] = game_mode_id.value
+            useful_data['game_info']['game_mode'] = game_mode_id.value
 
     game_type = try_get_value(game_state_controller, '_gameSetup', 'gameType')
     if game_type:
-        useful_data['game_type'] = game_type.type.value
+        useful_data['game_info']['game_type'] = game_type.type.value
 
     game_type_flow = try_get_value(game_state_controller, '_gameSetup',
-                                    'gameTypeFlow')
+                                   'gameTypeFlow')
 
     net_player_startups = None
     if isinstance(game_type_flow, models.CupMatchFlowController):
         cup_type = try_get_value(game_type_flow, '_cupType')
-        useful_data['cup_type'] = cup_type.value
+        useful_data['game_info']['cup_type'] = cup_type.value
 
         net_player_startups = try_get_value(game_type_flow,
                                             '_netPlayersStartup')
 
     elif isinstance(game_info_popup, models.GameInfoPopup):
-        useful_data['cup_type'] = 'QUICK_MATCH'
+        useful_data['game_info']['cup_type'] = 'QUICK_MATCH'
         net_player_startups = try_get_value(game_info_popup, '_netPlayers')
 
     if net_player_startups:
@@ -82,7 +84,7 @@ def parse(pm):
             username = try_get_value(net_player_startup, 'username')
             if username.value:
                 printable_username = username.value.encode('utf8',
-                                                            'replace').decode()
+                                                           'replace').decode()
             useful_data['players'][i]['username'] = printable_username
 
             _id = try_get_value(net_player_startup, 'id')
@@ -111,6 +113,6 @@ def parse(pm):
                 player['total_score'] = sum(medals)
 
         target_score = try_get_value(game_type_flow, '_targetScore')
-        useful_data['target_score'] = target_score
+        useful_data['game_info']['target_score'] = target_score
 
     return useful_data

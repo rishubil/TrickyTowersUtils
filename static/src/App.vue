@@ -4,19 +4,14 @@
       <img class="bg" src="/assets/img/test3.jpg">
       <PlayerNames :players="gamedata.players"></PlayerNames>
     </div>
-    <div id="toast">
-      <div id="configErrorMsgBox" class="message-box">
-        <p>설정 정보를 불러올 수 없습니다.</p>
-      </div>
-      <div id="socketNotConnectedMsgBox" class="message-box on">
-        <p>서버와 연결되지 않았습니다.</p>
-      </div>
-    </div>
   </div>
 </template>
 
 <script>
 import PlayerNames from "/components/PlayerNames.vue";
+import createToast from "/js/utils.js";
+import _ from "lodash";
+import io from "socket.io-client";
 
 export default {
   name: "App",
@@ -25,13 +20,17 @@ export default {
   },
   data() {
     return {
+      socket: null,
       gamedata: {
         // test data
-        is_playing: true,
-        is_finished: false,
-        game_mode: "SURVIVAL_NORMAL",
-        game_type: "MULTIPLAYER_ONLINE",
-        cup_type: "ONLINE",
+        game_info: {
+          is_playing: true,
+          is_finished: false,
+          game_mode: "SURVIVAL_NORMAL",
+          game_type: "MULTIPLAYER_ONLINE",
+          cup_type: "ONLINE",
+          target_score: 9
+        },
         players: [
           {
             username: "KoreanTrickyTowersUnion",
@@ -60,10 +59,34 @@ export default {
             medals: [1, 1],
             total_score: 2
           }
-        ],
-        target_score: 9
+        ]
       }
     };
+  },
+  methods: {
+    connectSocket() {
+      console.info("Trying to connect server...");
+      this.socket = io.connect(
+        "http://" + document.domain + ":" + location.port
+      );
+    },
+    initSocket() {
+      this.connectSocket();
+      this.socket.on("connect", function() {
+        console.info("Connected to server");
+      });
+      this.socket.on("json", function(data) {
+        this.gamedata = data;
+      });
+      this.socket.on("disconnect", function() {
+        console.info("Disconnected to server");
+        console.info("Trying to reconnect after 3 sec...");
+        _.delay(this.connectSocket, 3000);
+      });
+    }
+  },
+  created() {
+    this.initSocket();
   }
 };
 </script>
@@ -103,23 +126,5 @@ body {
 
 .hidden {
   opacity: 0;
-}
-
-#toast {
-  padding: 16px;
-  position: fixed;
-  top: 0;
-  left: 0;
-}
-
-.message-box {
-  background: #b7d276b8;
-  padding: 16px;
-  border-radius: 8px;
-  display: none;
-}
-
-.message-box.on {
-  display: block;
 }
 </style>
