@@ -1,8 +1,16 @@
 <template>
-  <div class="player-name-box">
-    <div class="name">
-      <p ref="fittyTarget">{{ player.username }}</p>
-    </div>
+  <div class="player-name-box-wrapper">
+    <transition
+      name="player-name-box-transition"
+      enter-active-class="animated slideInDown"
+      leave-active-class="animated slideOutUp"
+    >
+      <div v-if="player.is_online" class="player-name-box">
+        <div class="name">
+          <p ref="fittyTarget">{{ player.username }}</p>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -58,12 +66,18 @@ export default {
 </script>
 
 <style scoped>
-.player-name-box {
+.player-name-box-wrapper {
   width: 16.3vw;
   height: 4.5vw;
   position: absolute;
   top: 0;
   display: none;
+}
+
+.player-name-box {
+  width: 100%;
+  height: 100%;
+  position: absolute;
   background-image: url(/assets/img/nametag.png);
   background-size: contain;
   background-repeat: no-repeat;

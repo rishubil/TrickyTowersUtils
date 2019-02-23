@@ -1,5 +1,5 @@
 <template>
-  <div class="player-names" :class="playerNumberClass">
+  <div class="player-names" :class="playerNumberClass" v-show="isPlaying">
     <PlayerNameBox v-for="player in players" :key="player.id" :player="player"></PlayerNameBox>
   </div>
 </template>
@@ -10,7 +10,8 @@ import PlayerNameBox from "/components/PlayerNameBox.vue";
 export default {
   name: "PlayerNames",
   props: {
-    players: Array
+    players: Array,
+    gameInfo: Object
   },
   components: {
     PlayerNameBox
@@ -19,8 +20,16 @@ export default {
     return {};
   },
   computed: {
-    playerNumberClass: function() {
+    playerNumberClass() {
       return "p" + this.players.length;
+    },
+    isPlaying() {
+      if (this.gameInfo != undefined) {
+        if (this.gameInfo.is_playing != undefined) {
+          return this.gameInfo.is_playing;
+        }
+      }
+      return false;
     }
   }
 };
@@ -39,47 +48,47 @@ export default {
   animation-fill-mode: both;
 }
 
-.player-names.p4 .player-name-box:nth-child(1) {
+.player-names.p4 .player-name-box-wrapper:nth-child(1) {
   left: 12.6vw;
   display: block;
 }
 
-.player-names.p4 .player-name-box:nth-child(2) {
+.player-names.p4 .player-name-box-wrapper:nth-child(2) {
   left: 35.65vw;
   display: block;
 }
 
-.player-names.p4 .player-name-box:nth-child(3) {
+.player-names.p4 .player-name-box-wrapper:nth-child(3) {
   left: 58.7vw;
   display: block;
 }
 
-.player-names.p4 .player-name-box:nth-child(4) {
+.player-names.p4 .player-name-box-wrapper:nth-child(4) {
   left: 81.75vw;
   display: block;
 }
 
-.player-names.p3 .player-name-box:nth-child(1) {
+.player-names.p3 .player-name-box-wrapper:nth-child(1) {
   left: 16.5vw;
   display: block;
 }
 
-.player-names.p3 .player-name-box:nth-child(2) {
+.player-names.p3 .player-name-box-wrapper:nth-child(2) {
   left: 47.3vw;
   display: block;
 }
 
-.player-names.p3 .player-name-box:nth-child(3) {
+.player-names.p3 .player-name-box-wrapper:nth-child(3) {
   left: 77.9vw;
   display: block;
 }
 
-.player-names.p2 .player-name-box:nth-child(1) {
+.player-names.p2 .player-name-box-wrapper:nth-child(1) {
   left: 24.2vw;
   display: block;
 }
 
-.player-names.p2 .player-name-box:nth-child(2) {
+.player-names.p2 .player-name-box-wrapper:nth-child(2) {
   left: 70.3vw;
   display: block;
 }

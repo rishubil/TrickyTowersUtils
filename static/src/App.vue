@@ -2,7 +2,7 @@
   <div class="container">
     <div id="overlayContainer">
       <img class="bg" src="/assets/img/test3.jpg">
-      <PlayerNames :players="gamedata.players"></PlayerNames>
+      <PlayerNames :players="gamedata.players" :gameInfo="gamedata.game_info"></PlayerNames>
     </div>
   </div>
 </template>
@@ -21,6 +21,7 @@ export default {
   data() {
     return {
       socket: null,
+      config: null,
       gamedata: {
         // test data
         game_info: {
@@ -83,10 +84,35 @@ export default {
         console.info("Trying to reconnect after 3 sec...");
         _.delay(this.connectSocket, 3000);
       });
+    },
+    getConfig() {
+      console.info("Trying to get config data...");
+      const request = new XMLHttpRequest();
+      request.open("GET", "/overlay_config.json", true);
+      request.onload = () => {
+        if (request.status >= 200 && request.status < 400) {
+          this.updateConfig(JSON.parse(request.responseText).config);
+          console.info("Config data loaded");
+        } else {
+          console.info("Cannot get config data from server.");
+          console.info("Trying to get after 3 sec...");
+          _.delay(this.getConfig, 3000);
+        }
+      };
+      request.onerror = () => {
+        console.info("Cannot get config data from server.");
+        console.info("Trying to get after 3 sec...");
+        _.delay(this.getConfig, 3000);
+      };
+      request.send();
+    },
+    updateConfig(data) {
+      this.config = data;
     }
   },
   created() {
     this.initSocket();
+    this.getConfig();
   }
 };
 </script>
@@ -122,9 +148,5 @@ p {
 body {
   margin: 0;
   overflow-y: hidden;
-}
-
-.hidden {
-  opacity: 0;
 }
 </style>
