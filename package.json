@@ -6,6 +6,10 @@
     "vue-template-compiler": "^2.6.6"
   },
   "dependencies": {
+    "animate.css": "^3.7.0",
+    "fitty": "^2.2.6",
+    "lodash": "^4.17.11",
+    "socket.io": "^2.2.0",
     "vue": "^2.6.6",
     "vue-hot-reload-api": "^2.3.2"
   },
