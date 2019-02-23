@@ -1,38 +1,6 @@
 var config = null;
 var data = null;
 
-function ready(fn) {
-  if (document.attachEvent ? document.readyState === "complete" : document.readyState !== "loading") {
-    fn();
-  } else {
-    document.addEventListener('DOMContentLoaded', fn);
-  }
-}
-
-function hasClass(el, className) {
-  if (el.classList) {
-    return el.classList.contains(className);
-  } else {
-    return new RegExp('(^| )' + className + '( |$)', 'gi').test(el.className);
-  }
-}
-
-function addClass(el, className) {
-  if (el.classList) {
-    el.classList.add(className);
-  } else {
-    el.className += ' ' + className;
-  }
-}
-
-function removeClass(el, className) {
-  if (el.classList) {
-    el.classList.remove(className);
-  } else {
-    el.className = el.className.replace(new RegExp('(^|\\b)' + className.split(' ').join('|') + '(\\b|$)', 'gi'), ' ');
-  }
-}
-
 function updateMessage(id, text) {
   var msgBox = document.querySelector('#' + id);
   msgBox.textContent = text;
@@ -170,10 +138,6 @@ function initSocket() {
     console.log('socket disconnected');
     showMessage('socketNotConnectedMsgBox');
   });
-}
-
-function vwToPx(vw) {
-  return document.documentElement.clientWidth / 100 * vw;
 }
 
 function initFitty() {
