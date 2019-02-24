@@ -31,6 +31,13 @@ pipenv run server-dev
 And open `http://127.0.0.1:8082/overlay` on your browser.
 (If you changed host and port on configuration file, Use that values)
 
+You may want to add custom CSS below on broadcasting software(like OBS or Xsplit) for using as browser source.
+
+```css
+body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; }
+#overlayContainer .bg { display: none; }
+```
+
 Observer:
 
 ```
