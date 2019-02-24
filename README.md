@@ -3,7 +3,7 @@ Tricky Towers Utils
 
 ## Requirements
 
-Git, Python 3.7 and Pipenv
+Git, Python 3.7, Pipenv, Node v10.15.1 and yarn
 
 ## Installation
 
@@ -11,6 +11,7 @@ Git, Python 3.7 and Pipenv
 git clone https://github.com/rishubil/TrickyTowersUtils.git
 cd TrickyTowersUtils
 pipenv install
+yarn install --dev
 ```
 
 ## Configuration
@@ -23,6 +24,7 @@ You should change value of the `secret_key` on `Server` section randomly.
 Overlay:
 
 ```
+yarn build
 pipenv run server-dev
 ```
 

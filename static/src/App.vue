@@ -24,43 +24,43 @@ export default {
       config: {},
       gamedata: {
         // test data
-        game_info: {
-          is_playing: true,
-          is_finished: false,
-          game_mode: "SURVIVAL_NORMAL",
-          game_type: "MULTIPLAYER_ONLINE",
-          cup_type: "ONLINE",
-          target_score: 9
-        },
-        players: [
-          {
-            username: "KoreanTrickyTowersUnion",
-            id: "KEYBOARD",
-            steam_id: "76561198901664805",
-            elo: 1000144,
-            is_online: true,
-            medals: [3, 2],
-            total_score: 5
-          },
-          {
-            username: "한국어이름",
-            id: "RemotePlayer3",
-            steam_id: "76561198273117810",
-            elo: 1000123,
-            is_online: true,
-            medals: [2, 3],
-            total_score: 5
-          },
-          {
-            username: "123",
-            id: "RemotePlayer5",
-            steam_id: "76561198152298180",
-            elo: 1000012,
-            is_online: true,
-            medals: [1, 1],
-            total_score: 2
-          }
-        ]
+        //   game_info: {
+        //     is_playing: true,
+        //     is_finished: false,
+        //     game_mode: "SURVIVAL_NORMAL",
+        //     game_type: "MULTIPLAYER_ONLINE",
+        //     cup_type: "ONLINE",
+        //     target_score: 9
+        //   },
+        //   players: [
+        //     {
+        //       username: "KoreanTrickyTowersUnion",
+        //       id: "KEYBOARD",
+        //       steam_id: "76561198901664805",
+        //       elo: 1000144,
+        //       is_online: true,
+        //       medals: [3, 2],
+        //       total_score: 5
+        //     },
+        //     {
+        //       username: "한국어이름",
+        //       id: "RemotePlayer3",
+        //       steam_id: "76561198273117810",
+        //       elo: 1000123,
+        //       is_online: true,
+        //       medals: [2, 3],
+        //       total_score: 5
+        //     },
+        //     {
+        //       username: "123",
+        //       id: "RemotePlayer5",
+        //       steam_id: "76561198152298180",
+        //       elo: 1000012,
+        //       is_online: true,
+        //       medals: [1, 1],
+        //       total_score: 2
+        //     }
+        //   ]
       }
     };
   },
