@@ -5,7 +5,7 @@ class Config:
     def __init__(self):
         try:
             self._config = configparser.ConfigParser()
-            self._config.read('config.ini')
+            self._config.read('config.ini', encoding='utf-8')
         except Exception as e:
             raise RuntimeError('Cannot open configuration file') from e
 

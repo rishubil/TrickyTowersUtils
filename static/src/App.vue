@@ -2,7 +2,7 @@
   <div class="container">
     <div id="overlayContainer">
       <img class="bg" src="/assets/img/test3.jpg">
-      <PlayerNames :players="gamedata.players" :gameInfo="gamedata.game_info"></PlayerNames>
+      <PlayerNames :players="gamedata.players" :gameInfo="gamedata.game_info" :config="config"></PlayerNames>
     </div>
   </div>
 </template>
@@ -21,7 +21,7 @@ export default {
   data() {
     return {
       socket: null,
-      config: null,
+      config: {},
       gamedata: {
         // test data
         game_info: {
@@ -36,7 +36,7 @@ export default {
           {
             username: "KoreanTrickyTowersUnion",
             id: "KEYBOARD",
-            steam_id: 76561198069404530,
+            steam_id: "76561198901664805",
             elo: 1000144,
             is_online: true,
             medals: [3, 2],
@@ -45,7 +45,7 @@ export default {
           {
             username: "한국어이름",
             id: "RemotePlayer3",
-            steam_id: 76561198273117810,
+            steam_id: "76561198273117810",
             elo: 1000123,
             is_online: true,
             medals: [2, 3],
@@ -54,7 +54,7 @@ export default {
           {
             username: "123",
             id: "RemotePlayer5",
-            steam_id: 76561198152298180,
+            steam_id: "76561198152298180",
             elo: 1000012,
             is_online: true,
             medals: [1, 1],
@@ -73,13 +73,13 @@ export default {
     },
     initSocket() {
       this.connectSocket();
-      this.socket.on("connect", function() {
+      this.socket.on("connect", () => {
         console.info("Connected to server");
       });
       this.socket.on("json", data => {
         this.gamedata = data;
       });
-      this.socket.on("disconnect", function() {
+      this.socket.on("disconnect", () => {
         console.info("Disconnected to server");
         console.info("Trying to reconnect after 3 sec...");
         _.delay(this.connectSocket, 3000);

@@ -4,10 +4,15 @@
       name="player-name-box-transition"
       enter-active-class="animated slideInDown"
       leave-active-class="animated slideOutUp"
+      :after-leave="removeFitty"
     >
-      <div v-if="player.is_online" class="player-name-box">
+      <div
+        v-if="isDisplayNames && player.is_online"
+        class="player-name-box"
+        :class="{highlight: shouldHighlight}"
+      >
         <div class="name">
-          <p ref="fittyTarget">{{ player.username }}</p>
+          <p ref="fittyTarget">{{ display_username }}</p>
         </div>
       </div>
     </transition>
@@ -22,12 +27,30 @@ import { vwToPx } from "/js/utils.js";
 export default {
   name: "PlayerNameBox",
   props: {
-    player: Object
+    player: Object,
+    isDisplayNames: Boolean,
+    config: Object
   },
   data() {
     return {
       fittyInstance: null
     };
+  },
+  computed: {
+    display_username() {
+      const renameConfigKey = "rename_" + this.player.steam_id;
+      if (_.has(this.config, renameConfigKey)) {
+        return this.config[renameConfigKey];
+      }
+      return this.player.username;
+    },
+    shouldHighlight() {
+      const highlightConfigKey = "highlight_" + this.player.steam_id;
+      if (_.has(this.config, highlightConfigKey)) {
+        return this.config[highlightConfigKey] == "true";
+      }
+      return false;
+    }
   },
   methods: {
     setFitty() {
@@ -58,9 +81,8 @@ export default {
       window.addEventListener("resize", this.debouncedUpdateFitty, true);
     });
   },
-  beforeDestroy() {
+  destroyed() {
     window.removeEventListener("resize", this.debouncedUpdateFitty, true);
-    this.removeFitty();
   }
 };
 </script>
@@ -70,7 +92,7 @@ export default {
   width: 16.3vw;
   height: 4.5vw;
   position: absolute;
-  top: 0;
+  top: -1px;
   display: none;
 }
 

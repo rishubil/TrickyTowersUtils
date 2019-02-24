@@ -1,27 +1,72 @@
 <template>
-  <div class="player-names" :class="playerNumberClass" v-show="isPlaying">
-    <PlayerNameBox v-for="player in players" :key="player.id" :player="player"></PlayerNameBox>
+  <div class="player-names" :class="playerNumberClass" v-if="isDisplayNames">
+    <PlayerNameBox
+      v-for="player in filteredPlayers"
+      :key="player.id"
+      :player="player"
+      :isDisplayNames="isDisplayNames"
+      :config="config"
+    ></PlayerNameBox>
   </div>
 </template>
 
 <script>
 import PlayerNameBox from "/components/PlayerNameBox.vue";
+import _ from "lodash";
 
 export default {
   name: "PlayerNames",
   props: {
     players: Array,
-    gameInfo: Object
+    gameInfo: Object,
+    config: Object
   },
   components: {
     PlayerNameBox
   },
   data() {
-    return {};
+    return {
+      currentRound: 0,
+      playerFilter: [],
+      isDisplayNames: false
+    };
+  },
+  methods: {
+    updateRound(newRound) {
+      if (this.currentRound != newRound) {
+        this.currentRound = newRound;
+        this.updatePlayerFilter();
+      }
+    },
+    updatePlayerFilter() {
+      this.playerFilter = _.chain(this.players)
+        .filter(player => !player.is_online)
+        .map(player => player.id)
+        .value();
+    },
+    initPlayerFilter() {
+      this.playerFilter = [];
+    },
+    showDisplayName() {
+      if (this.shouldDisplayNames) {
+        this.isDisplayNames = true;
+      }
+    },
+    hideDisplayName() {
+      if (!this.shouldDisplayNames) {
+        this.isDisplayNames = false;
+      }
+    }
   },
   computed: {
+    filteredPlayers() {
+      return _.filter(
+        this.players,
+        player => _.indexOf(this.playerFilter, player.id) == -1
+      );
+    },
     playerNumberClass() {
-      return "p" + this.players.length;
+      return "p" + this.filteredPlayers.length;
     },
     isPlaying() {
       if (this.gameInfo != undefined) {
@@ -30,6 +75,46 @@ export default {
         }
       }
       return false;
+    },
+    isFinished() {
+      if (this.gameInfo != undefined) {
+        if (this.gameInfo.is_finished != undefined) {
+          return this.gameInfo.is_finished;
+        }
+      }
+      return false;
+    },
+    shouldDisplayNames() {
+      return this.isPlaying && !this.isFinished;
+    }
+  },
+  watch: {
+    players(val) {
+      if (this.players.length > 0) {
+        const player = this.players[0];
+        if (_.isArray(player.medals)) {
+          const newRound = player.medals.length + 1;
+          this.updateRound(newRound);
+        }
+      }
+    },
+    gameInfo(val) {
+      if (!this.isPlaying) {
+        this.initPlayerFilter();
+        this.updateRound(0);
+      }
+      if (this.shouldDisplayNames) {
+        this.showDisplayName();
+      } else {
+        _.delay(this.hideDisplayName, 2000);
+      }
+    }
+  },
+  mounted() {
+    if (this.shouldDisplayNames) {
+      this.showDisplayName();
+    } else {
+      this.hideDisplayName();
     }
   }
 };

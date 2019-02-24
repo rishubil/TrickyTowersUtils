@@ -18,7 +18,7 @@ def parse_is_playing(pm, useful_data):
     try:
         ptr = follow_module_ptr(pm, 'TrickyTowers.exe', 0x01010BD0, 0x8)
         useful_data['game_info']['is_playing'] = pm.read_short(ptr) == 1
-    except MemoryFollowError as e:
+    except (MemoryFollowError, AttributeError) as e:
         print(f'[!] Cannot get is_playing = {e}')
         useful_data['game_info']['is_playing'] = False
 
@@ -28,7 +28,7 @@ def parse_is_finished(pm, useful_data):
         ptr = follow_module_ptr(pm, 'TrickyTowers.exe', 0x010494D8, 0x1C,
                                 0x59C, 0x214, 0x48, 0x228)
         useful_data['game_info']['is_finished'] = pm.read_short(ptr) == 1
-    except MemoryFollowError as e:
+    except (MemoryFollowError, AttributeError) as e:
         print(f'[!] Cannot get is_finished = {e}')
         useful_data['game_info']['is_finished'] = False
 
@@ -38,7 +38,7 @@ def get_game_state_controller(pm):
         ptr = follow_module_ptr(pm, 'mono.dll', 0x1F6964, 0x3A0, 0x6A8, 0xC,
                                 0x14, 0x28, 0x0)
         return models.GameStateController(pm, ptr)
-    except MemoryFollowError as e:
+    except (MemoryFollowError, AttributeError) as e:
         print(f'[!] Cannot get GameStateController = {e}')
         return None
 
@@ -47,7 +47,7 @@ def get_user_manager(pm):
     try:
         ptr = follow_module_ptr(pm, 'mono.dll', 0x1F40AC, 0x1B4, 0x0)
         return models.UserManager(pm, ptr)
-    except MemoryFollowError as e:
+    except (MemoryFollowError, AttributeError) as e:
         print(f'[!] Cannot get UserManager = {e}')
         return None
 
@@ -57,7 +57,7 @@ def get_game_info_popup(pm):
         ptr = follow_module_ptr(pm, 'mono.dll', 0x1F40AC, 0x1B4, 0x10, 0x2C,
                                 0x48, 0x20, 0xAC, 0x0)
         return models.GameInfoPopup(pm, ptr)
-    except MemoryFollowError as e:
+    except (MemoryFollowError, AttributeError) as e:
         print(f'[!] Cannot get GameInfoPopup = {e}')
         return None
 
@@ -145,7 +145,7 @@ def parse_net_player_startups(useful_data, net_player_startups):
                 player['id'] = None
 
         try:
-            player['steam_id'] = net_player_startup.steamId
+            player['steam_id'] = str(net_player_startup.steamId)
         except (TypeError, AttributeError):
             pass
         finally:
