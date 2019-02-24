@@ -4,15 +4,11 @@
       name="player-name-box-transition"
       enter-active-class="animated slideInDown"
       leave-active-class="animated slideOutUp"
-      :after-leave="removeFitty"
+      :after-leave="requestRemoveFitty"
     >
-      <div
-        v-if="isDisplayNames && player.is_online"
-        class="player-name-box"
-        :class="{highlight: shouldHighlight}"
-      >
+      <div v-if="isDisplayMyName" class="player-name-box" :class="{ highlight: shouldHighlight }">
         <div class="name">
-          <p ref="fittyTarget">{{ display_username }}</p>
+          <FittyP :text="display_username" ref="fitty"></FittyP>
         </div>
       </div>
     </transition>
@@ -20,9 +16,8 @@
 </template>
 
 <script>
-import fitty from "fitty";
 import _ from "lodash";
-import { vwToPx } from "/js/utils.js";
+import FittyP from "/components/FittyP.vue";
 
 export default {
   name: "PlayerNameBox",
@@ -31,12 +26,16 @@ export default {
     isDisplayNames: Boolean,
     config: Object
   },
+  components: {
+    FittyP
+  },
   data() {
-    return {
-      fittyInstance: null
-    };
+    return {};
   },
   computed: {
+    isDisplayMyName() {
+      return this.isDisplayNames && this.player.is_online;
+    },
     display_username() {
       const renameConfigKey = "rename_" + this.player.steam_id;
       if (_.has(this.config, renameConfigKey)) {
@@ -53,36 +52,9 @@ export default {
     }
   },
   methods: {
-    setFitty() {
-      this.fittyInstance = fitty(this.$refs["fittyTarget"], {
-        minSize: vwToPx(0.8),
-        maxSize: vwToPx(1.6),
-        multiLine: false,
-        observeWindow: false
-      });
-    },
-    removeFitty() {
-      if (this.fittyInstance != null) {
-        this.fittyInstance.unsubscribe();
-      }
-    },
-    debouncedUpdateFitty: function() {} // temporary function. It will replaced on created
-  },
-  created() {
-    this.debouncedUpdateFitty = _.debounce(() => {
-      this.removeFitty();
-      this.setFitty();
-    }, 200);
-  },
-  mounted() {
-    document.fonts.ready.then(() => {
-      fitty.observeWindow = false;
-      this.setFitty();
-      window.addEventListener("resize", this.debouncedUpdateFitty, true);
-    });
-  },
-  destroyed() {
-    window.removeEventListener("resize", this.debouncedUpdateFitty, true);
+    requestRemoveFitty() {
+      this.$refs.fitty.removeFitty();
+    }
   }
 };
 </script>

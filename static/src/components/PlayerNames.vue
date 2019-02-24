@@ -1,5 +1,5 @@
 <template>
-  <div class="player-names" :class="playerNumberClass" v-if="isDisplayNames">
+  <div class="player-names" :class="playerNumberClass">
     <PlayerNameBox
       v-for="player in filteredPlayers"
       :key="player.id"
