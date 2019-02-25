@@ -20,7 +20,7 @@ socketio-client = "*"
 python_version = "3.7"
 
 [scripts]
-server-dev = "python server.py"
+server = "python server.py"
 observer = "python observer.py"
 build-observer= "pyinstaller -F observer.py"
 build-server= "pyinstaller -F server.py --add-data \"static;static\" --hidden-import=\"engineio.async_drivers.gevent\""
