@@ -1,10 +1,11 @@
 @echo off
 
-rmdir /s build
-rmdir /s dist
-rmdir /s static/dist
+del *.spec
+rmdir /s /q build
+rmdir /s /q dist
+rmdir /s /q static/dist
 
-yarn build
+call yarn build
 pipenv run build-observer
 pipenv run build-server
 copy .\config(example).ini .\dist\config(example).ini
