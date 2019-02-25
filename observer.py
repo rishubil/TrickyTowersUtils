@@ -1,4 +1,5 @@
 from socketIO_client import SocketIO
+from socketIO_client.exceptions import ConnectionError
 from config import Config
 from timeit import default_timer
 from traceback import format_exc
@@ -22,14 +23,14 @@ def log(text):
 
 
 if __name__ == '__main__':
+    print('Observer is running...')
     while True:
         sleep(DELAY)
         try:
-            with SocketIO(HOST, PORT) as socketIO:
+            with SocketIO(HOST, PORT, wait_for_connection=False) as socketIO:
                 pm = Pymem('TrickyTowers.exe')
                 while True:
                     start = default_timer()
-
                     data = parse(pm)
                     socketIO.emit('json', data)
                     # _exit(0)
@@ -40,6 +41,9 @@ if __name__ == '__main__':
                     to_sleep = DELAY - delayed
                     if to_sleep > 0:
                         sleep(DELAY - delayed)
+        except ConnectionError as e:
+            print(f'[!] TrickyTowersUtils Server is may not running')
+            log(format_exc())
         except MemoryReadError as e:
             print(f'[!] Tricky Towers is may not running: {repr(e)}')
             log(format_exc())

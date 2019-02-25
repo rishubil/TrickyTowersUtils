@@ -4,19 +4,27 @@ monkey.patch_all()
 from flask import Flask, render_template, jsonify
 from flask_socketio import SocketIO, emit
 from json import dumps
+from os.path import join as pathjoin
+import sys
 
 from config import Config
 
 config = Config()
+DEBUG = config.get('Server', 'debug') == 'true'
+
+if getattr(sys, 'frozen', False):
+    base_dir = sys._MEIPASS
+else:
+    base_dir = '.'
 
 app = Flask(
     __name__,
     static_url_path='',
-    template_folder='static/dist',
-    static_folder='static/dist')
+    template_folder=pathjoin(base_dir, 'static', 'dist'),
+    static_folder=pathjoin(base_dir, 'static', 'dist'))
 app.config['SECRET_KEY'] = config.get('Server', 'secret_key')
 app.config['TEMPLATES_AUTO_RELOAD'] = True
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode="gevent")
 
 
 @app.route('/')
@@ -32,11 +40,13 @@ def overlay_config():
 
 @socketio.on('json')
 def broadcast(message):
-    print('received message: ' + str(message))
+    if DEBUG:
+        print('received message: ' + str(message))
     emit('json', message, json=True, broadcast=True)
 
 
 if __name__ == '__main__':
+    print('Server is running...')
     socketio.run(
         app,
         host=config.get('Server', 'host'),
