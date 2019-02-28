@@ -28,9 +28,11 @@ def parse_is_finished(pm, useful_data):
         ptr = follow_module_ptr(pm, 'TrickyTowers.exe', 0x010494D8, 0x1C,
                                 0x59C, 0x214, 0x48, 0x228)
         useful_data['game_info']['is_finished'] = pm.read_short(ptr) == 1
+        useful_data['temp']['is_finished_faild'] = False
     except (MemoryFollowError, AttributeError) as e:
         print(f'[!] Cannot get is_finished = {e}')
         useful_data['game_info']['is_finished'] = False
+        useful_data['temp']['is_finished_faild'] = True
 
 
 def get_game_state_controller(pm):
@@ -65,6 +67,15 @@ def get_game_info_popup(pm):
 def parse_game_state_controller(pm, useful_data):
     game_state_controller = get_game_state_controller(pm)
     # dump_obj(game_state_controller, 'game_state_controller')
+
+    if useful_data['temp']['is_finished_faild']:
+        try:
+            useful_data['game_info'][
+                'is_finished'] = game_state_controller._gameTypeController._winningControllers.get(
+                    0)._stateMachine._state.value == 'BASK'
+            print(f'[+] game_info.is_finished Alternative method applied')
+        except (TypeError, AttributeError):
+            pass
 
     try:
         game_mode = game_state_controller._gameSetup.gameMode
