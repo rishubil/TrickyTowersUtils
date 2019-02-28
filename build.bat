@@ -3,7 +3,7 @@
 del *.spec
 rmdir /s /q build
 rmdir /s /q dist
-rmdir /s /q static/dist
+rmdir /s /q static\dist
 
 call yarn build
 pipenv run build-observer
