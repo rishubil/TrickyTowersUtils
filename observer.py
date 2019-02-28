@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from socketIO_client import SocketIO
 from socketIO_client.exceptions import ConnectionError
 from config import Config
