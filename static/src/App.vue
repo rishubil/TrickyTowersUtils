@@ -79,6 +79,9 @@ export default {
       this.socket.on("json", data => {
         this.gamedata = data;
       });
+      this.socket.on("configUpdated", data => {
+        this.getConfig();
+      });
       this.socket.on("disconnect", () => {
         console.info("Disconnected to server");
         console.info("Trying to reconnect after 3 sec...");

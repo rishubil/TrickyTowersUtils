@@ -16,7 +16,7 @@ config = Config()
 DEBUG = config.get('Server', 'debug') == 'true'
 
 if getattr(sys, 'frozen', False):
-    base_dir = sys._MEIPASS
+    base_dir = sys._MEIPASS  # pylint: disable=no-member
 else:
     base_dir = '.'
 
@@ -38,14 +38,21 @@ def overlay():
 
 @app.route('/overlay_config.json')
 def overlay_config():
-    return jsonify(config=dict(config.items('Overlay')))
+    return jsonify(config=dict(Config().items('Overlay')))
 
 
 @socketio.on('json')
-def broadcast(message):
+def broadcast_json(message):
     if DEBUG:
         print('received message: ' + str(message))
     emit('json', message, json=True, broadcast=True)
+
+
+@socketio.on('configUpdated')
+def broadcast_config_updated(message):
+    if DEBUG:
+        print('received configUpdated')
+    emit('configUpdated', message, json=True, broadcast=True)
 
 
 if __name__ == '__main__':

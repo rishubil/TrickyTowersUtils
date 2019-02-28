@@ -16,6 +16,7 @@ flask-socketio = "*"
 gevent = "*"
 socketio-client = "*"
 chardet = "*"
+watchdog = "*"
 
 [requires]
 python_version = "3.7"
