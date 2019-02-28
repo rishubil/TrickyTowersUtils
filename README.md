@@ -33,15 +33,37 @@ body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; }
 #overlayContainer .bg { display: none; }
 ```
 
-## 4. Development
+## 4. General issues
+
+### 4.1. `server.exe` shuts down as soon as it runs.
+
+You may need to change your hostname to ASCII charactors.
+
+You can check your hostname by following command on console.
+
+```
+hostname
+```
+
+If your hostname contains non-ASCII charactors, you should change your hostname.
+You can change it by following command on console and **REBOOT YOUR MACHINE**.
+(Replace `NEW-NAME` to what you want)
+
+```
+wmic computersystem where name="%COMPUTERNAME%" rename name="NEW-NAME"
+```
+
+[Detail](https://github.com/rishubil/TrickyTowersUtils/issues/8)
+
+## 5. Development
 
 This section is for developers, not end users.
 
-### 4.1. Requirements
+### 5.1. Requirements
 
 Git, Python 3.7, Pipenv, Node v10.15.1 and yarn
 
-### 4.2. Installation
+### 5.2. Installation
 
 ```
 git clone https://github.com/rishubil/TrickyTowersUtils.git
@@ -50,13 +72,13 @@ pipenv install
 yarn install --dev
 ```
 
-### 4.3. Build
+### 5.3. Build
 
 ```
 build.bat
 ```
 
-### 4.4. Run for testing
+### 5.4. Run for testing
 
 Overlay(Front-end):
 
@@ -76,6 +98,6 @@ Observer:
 pipenv run observer
 ```
 
-## 5. License
+## 6. License
 
 MIT

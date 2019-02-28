@@ -33,15 +33,37 @@ body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; }
 #overlayContainer .bg { display: none; }
 ```
 
-## 4. 개발
+## 4. 일반적인 문제
+
+### 4.1. `server.exe`가 실행되자마자 바로 종료됩니다.
+
+컴퓨터의 hostname을 ASCII 문자로 변경해보세요.
+
+현재 컴퓨터의 hostname을 확인하시려면 다음 명령어를 콘솔에 입력하세요.
+
+```
+hostname
+```
+
+만약 hostname에 ASCII 이외의 문자(주로 한글)이 포함되어있다면, hostname을 변경해야 합니다.
+다음 명령어를 콘솔에 입력하고, **컴퓨터를 재부팅하여** hostname을 변경할 수 있습니다.
+(`NEW-NAME`을 변경할 값으로 입력하세요)
+
+```
+wmic computersystem where name="%COMPUTERNAME%" rename name="NEW-NAME"
+```
+
+[상세](https://github.com/rishubil/TrickyTowersUtils/issues/8)
+
+## 5. 개발
 
 이 섹션은 일반 사용자가 아닌 개발자를 위한 내용입니다.
 
-### 4.1. Requirements
+### 5.1. Requirements
 
 Git, Python 3.7, Pipenv, Node v10.15.1 and yarn
 
-### 4.2. Installation
+### 5.2. Installation
 
 ```
 git clone https://github.com/rishubil/TrickyTowersUtils.git
@@ -50,13 +72,13 @@ pipenv install
 yarn install --dev
 ```
 
-### 4.3. Build
+### 5.3. Build
 
 ```
 build.bat
 ```
 
-### 4.4. Run for testing
+### 5.4. Run for testing
 
 Overlay(Front-end):
 
