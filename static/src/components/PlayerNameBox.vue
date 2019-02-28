@@ -7,7 +7,7 @@
       :after-leave="requestRemoveFitty"
     >
       <div v-if="isDisplayMyName" class="player-name-box" :class="{ highlight: shouldHighlight }">
-        <div class="name">
+        <div class="name" :data-steamid="this.player.steam_id">
           <FittyP :text="display_username" ref="fitty"></FittyP>
         </div>
       </div>
