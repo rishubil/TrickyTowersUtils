@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import pymem
+from pymem.exception import ProcessNotFound
 
 
 class MemoryFollowError(Exception):
@@ -14,7 +15,11 @@ class MemoryFollowError(Exception):
 
 
 def get_base_addr(pm, name):
-    return pymem.process.module_from_name(pm.process_handle, name).lpBaseOfDll
+    try:
+        return pymem.process.module_from_name(pm.process_handle,
+                                              name).lpBaseOfDll
+    except AttributeError:
+        raise ProcessNotFound(name)
 
 
 def follow_ptr(pm, *args):
