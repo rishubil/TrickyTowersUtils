@@ -2,13 +2,13 @@
   <div class="container">
     <div id="overlayContainer">
       <img class="bg" src="/assets/img/test3.jpg">
-      <PlayerNames :players="gamedata.players" :gameInfo="gamedata.game_info" :config="config"></PlayerNames>
+      <player-header :players="gamedata.players" :gameInfo="gamedata.game_info" :config="config"></player-header>
     </div>
   </div>
 </template>
 
 <script>
-import PlayerNames from "/components/PlayerNames.vue";
+import PlayerHeader from "/components/PlayerHeader.vue";
 import createToast from "/js/utils.js";
 import _ from "lodash";
 import io from "socket.io-client";
@@ -16,7 +16,7 @@ import io from "socket.io-client";
 export default {
   name: "App",
   components: {
-    PlayerNames
+    PlayerHeader
   },
   data() {
     return {
@@ -24,43 +24,43 @@ export default {
       config: {},
       gamedata: {
         // test data
-        //   game_info: {
-        //     is_playing: true,
-        //     is_finished: false,
-        //     game_mode: "SURVIVAL_NORMAL",
-        //     game_type: "MULTIPLAYER_ONLINE",
-        //     cup_type: "ONLINE",
-        //     target_score: 9
-        //   },
-        //   players: [
-        //     {
-        //       username: "KoreanTrickyTowersUnion",
-        //       id: "KEYBOARD",
-        //       steam_id: "76561198901664805",
-        //       elo: 1000144,
-        //       is_online: true,
-        //       medals: [3, 2],
-        //       total_score: 5
-        //     },
-        //     {
-        //       username: "한국어이름",
-        //       id: "RemotePlayer3",
-        //       steam_id: "76561198273117810",
-        //       elo: 1000123,
-        //       is_online: true,
-        //       medals: [2, 3],
-        //       total_score: 5
-        //     },
-        //     {
-        //       username: "123",
-        //       id: "RemotePlayer5",
-        //       steam_id: "76561198152298180",
-        //       elo: 1000012,
-        //       is_online: true,
-        //       medals: [1, 1],
-        //       total_score: 2
-        //     }
-        //   ]
+        game_info: {
+          is_playing: true,
+          is_finished: false,
+          game_mode: "SURVIVAL_NORMAL",
+          game_type: "MULTIPLAYER_ONLINE",
+          cup_type: "ONLINE",
+          target_score: 9
+        },
+        players: [
+          {
+            username: "KoreanTrickyTowersUnion",
+            id: "KEYBOARD",
+            steam_id: "76561198901664805",
+            elo: 1000144,
+            is_online: true,
+            medals: [3, 2],
+            total_score: 5
+          },
+          {
+            username: "한국어이름",
+            id: "RemotePlayer3",
+            steam_id: "76561198273117810",
+            elo: 1000123,
+            is_online: true,
+            medals: [2, 3],
+            total_score: 5
+          },
+          {
+            username: "123",
+            id: "RemotePlayer5",
+            steam_id: "76561198152298180",
+            elo: 1000012,
+            is_online: true,
+            medals: [1, 1],
+            total_score: 2
+          }
+        ]
       }
     };
   },

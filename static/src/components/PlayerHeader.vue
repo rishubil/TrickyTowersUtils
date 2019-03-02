@@ -1,28 +1,28 @@
 <template>
   <div class="player-names" :class="playerNumberClass">
-    <PlayerNameBox
+    <player-item
       v-for="player in filteredPlayers"
       :key="player.id"
       :player="player"
       :isDisplayNames="isDisplayNames"
       :config="config"
-    ></PlayerNameBox>
+    ></player-item>
   </div>
 </template>
 
 <script>
-import PlayerNameBox from "/components/PlayerNameBox.vue";
+import PlayerItem from "/components/PlayerItem.vue";
 import _ from "lodash";
 
 export default {
-  name: "PlayerNames",
+  name: "PlayerHeader",
   props: {
     players: Array,
     gameInfo: Object,
     config: Object
   },
   components: {
-    PlayerNameBox
+    PlayerItem
   },
   data() {
     return {
@@ -133,47 +133,47 @@ export default {
   animation-fill-mode: both;
 }
 
-.player-names.p4 .player-name-box-wrapper:nth-child(1) {
+.player-names.p4 .player:nth-child(1) {
   left: 12.6vw;
   display: block;
 }
 
-.player-names.p4 .player-name-box-wrapper:nth-child(2) {
+.player-names.p4 .player:nth-child(2) {
   left: 35.65vw;
   display: block;
 }
 
-.player-names.p4 .player-name-box-wrapper:nth-child(3) {
+.player-names.p4 .player:nth-child(3) {
   left: 58.7vw;
   display: block;
 }
 
-.player-names.p4 .player-name-box-wrapper:nth-child(4) {
+.player-names.p4 .player:nth-child(4) {
   left: 81.75vw;
   display: block;
 }
 
-.player-names.p3 .player-name-box-wrapper:nth-child(1) {
+.player-names.p3 .player:nth-child(1) {
   left: 16.5vw;
   display: block;
 }
 
-.player-names.p3 .player-name-box-wrapper:nth-child(2) {
+.player-names.p3 .player:nth-child(2) {
   left: 47.3vw;
   display: block;
 }
 
-.player-names.p3 .player-name-box-wrapper:nth-child(3) {
+.player-names.p3 .player:nth-child(3) {
   left: 77.9vw;
   display: block;
 }
 
-.player-names.p2 .player-name-box-wrapper:nth-child(1) {
+.player-names.p2 .player:nth-child(1) {
   left: 24.2vw;
   display: block;
 }
 
-.player-names.p2 .player-name-box-wrapper:nth-child(2) {
+.player-names.p2 .player:nth-child(2) {
   left: 70.3vw;
   display: block;
 }

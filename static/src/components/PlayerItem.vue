@@ -1,14 +1,16 @@
 <template>
-  <div class="player-name-box-wrapper">
+  <div class="player">
     <transition
       name="player-name-box-transition"
       enter-active-class="animated slideInDown"
       leave-active-class="animated slideOutUp"
       :after-leave="requestRemoveFitty"
     >
-      <div v-if="isDisplayMyName" class="player-name-box" :class="{ highlight: shouldHighlight }">
-        <div class="name" :data-steamid="this.player.steam_id">
-          <FittyP :text="display_username" ref="fitty"></FittyP>
+      <div>
+        <div v-if="isDisplayMyName" class="player-name-box" :class="{ highlight: shouldHighlight }">
+          <div class="name" :data-steamid="this.player.steam_id">
+            <fitty-p :text="display_username" ref="fitty"></fitty-p>
+          </div>
         </div>
       </div>
     </transition>
@@ -20,7 +22,7 @@ import _ from "lodash";
 import FittyP from "/components/FittyP.vue";
 
 export default {
-  name: "PlayerNameBox",
+  name: "PlayerItem",
   props: {
     player: Object,
     isDisplayNames: Boolean,
@@ -60,7 +62,7 @@ export default {
 </script>
 
 <style scoped>
-.player-name-box-wrapper {
+.player {
   width: 16.3vw;
   height: 4.5vw;
   position: absolute;
