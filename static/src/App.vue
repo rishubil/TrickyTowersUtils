@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <div id="overlayContainer">
-      <img class="bg" src="/assets/img/test3.jpg">
+      <img class="bg" src="/assets/img/test4.jpg">
       <player-header :players="gamedata.players" :gameInfo="gamedata.game_info" :config="config"></player-header>
     </div>
   </div>
@@ -24,43 +24,52 @@ export default {
       config: {},
       gamedata: {
         // test data
-        game_info: {
-          is_playing: true,
-          is_finished: false,
-          game_mode: "SURVIVAL_NORMAL",
-          game_type: "MULTIPLAYER_ONLINE",
-          cup_type: "ONLINE",
-          target_score: 9
-        },
-        players: [
-          {
-            username: "KoreanTrickyTowersUnion",
-            id: "KEYBOARD",
-            steam_id: "76561198901664805",
-            elo: 1000144,
-            is_online: true,
-            medals: [3, 2],
-            total_score: 5
-          },
-          {
-            username: "한국어이름",
-            id: "RemotePlayer3",
-            steam_id: "76561198273117810",
-            elo: 1000123,
-            is_online: true,
-            medals: [2, 3],
-            total_score: 5
-          },
-          {
-            username: "123",
-            id: "RemotePlayer5",
-            steam_id: "76561198152298180",
-            elo: 1000012,
-            is_online: true,
-            medals: [1, 1],
-            total_score: 2
-          }
-        ]
+        // game_info: {
+        //   is_playing: true,
+        //   is_finished: false,
+        //   game_mode: "SURVIVAL_NORMAL",
+        //   game_type: "MULTIPLAYER_ONLINE",
+        //   cup_type: "ONLINE",
+        //   target_score: 9
+        // },
+        // players: [
+        //   {
+        //     username: "KoreanTrickyTowersUnion",
+        //     id: "KEYBOARD",
+        //     steam_id: "76561198901664805",
+        //     elo: 1000144,
+        //     is_online: true,
+        //     medals: [3, 3],
+        //     total_score: 6
+        //   },
+        //   {
+        //     username: "한국어이름",
+        //     id: "RemotePlayer3",
+        //     steam_id: "0",
+        //     elo: 1000123,
+        //     is_online: true,
+        //     medals: [2, 3],
+        //     total_score: 5
+        //   },
+        //   {
+        //     username: "123",
+        //     id: "RemotePlayer5",
+        //     steam_id: "0",
+        //     elo: 1000012,
+        //     is_online: true,
+        //     medals: [1, 1],
+        //     total_score: 2
+        //   },
+        //   {
+        //     username: "테스트",
+        //     id: "RemotePlayer6",
+        //     steam_id: "0",
+        //     elo: 1000000,
+        //     is_online: true,
+        //     medals: [4, 4],
+        //     total_score: 0
+        //   }
+        // ]
       }
     };
   },

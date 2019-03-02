@@ -60,10 +60,15 @@ export default {
   },
   computed: {
     filteredPlayers() {
-      return _.filter(
+      const vps = _.filter(
         this.players,
         player => _.indexOf(this.playerFilter, player.id) == -1
       );
+      const scores = _.reverse(_.map(vps, "total_score").sort());
+      return _.map(vps, player => {
+        player.rank = _.indexOf(scores, player.total_score) + 1;
+        return player;
+      });
     },
     playerNumberClass() {
       return "p" + this.filteredPlayers.length;
