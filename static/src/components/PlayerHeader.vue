@@ -4,7 +4,7 @@
       v-for="player in filteredPlayers"
       :key="player.id"
       :player="player"
-      :isDisplayNames="isDisplayNames"
+      :isDisplayNames="inPlaying"
       :config="config"
     ></player-item>
   </div>
@@ -12,10 +12,12 @@
 
 <script>
 import PlayerItem from "/components/PlayerItem.vue";
+import inPlayingMixin from "/js/inPlayingMixin.js";
 import _ from "lodash";
 
 export default {
   name: "PlayerHeader",
+  mixins: [inPlayingMixin],
   props: {
     players: Array,
     gameInfo: Object,
@@ -27,8 +29,7 @@ export default {
   data() {
     return {
       currentRound: 0,
-      playerFilter: [],
-      isDisplayNames: false
+      playerFilter: []
     };
   },
   methods: {
@@ -46,16 +47,6 @@ export default {
     },
     initPlayerFilter() {
       this.playerFilter = [];
-    },
-    showDisplayName() {
-      if (this.shouldDisplayNames) {
-        this.isDisplayNames = true;
-      }
-    },
-    hideDisplayName() {
-      if (!this.shouldDisplayNames) {
-        this.isDisplayNames = false;
-      }
     }
   },
   computed: {
@@ -72,25 +63,6 @@ export default {
     },
     playerNumberClass() {
       return "p" + this.filteredPlayers.length;
-    },
-    isPlaying() {
-      if (this.gameInfo != undefined) {
-        if (this.gameInfo.is_playing != undefined) {
-          return this.gameInfo.is_playing;
-        }
-      }
-      return false;
-    },
-    isFinished() {
-      if (this.gameInfo != undefined) {
-        if (this.gameInfo.is_finished != undefined) {
-          return this.gameInfo.is_finished;
-        }
-      }
-      return false;
-    },
-    shouldDisplayNames() {
-      return this.isPlaying && !this.isFinished;
     }
   },
   watch: {
@@ -108,18 +80,6 @@ export default {
         this.initPlayerFilter();
         this.updateRound(0);
       }
-      if (this.shouldDisplayNames) {
-        this.showDisplayName();
-      } else {
-        _.delay(this.hideDisplayName, 2000);
-      }
-    }
-  },
-  mounted() {
-    if (this.shouldDisplayNames) {
-      this.showDisplayName();
-    } else {
-      this.hideDisplayName();
     }
   }
 };
