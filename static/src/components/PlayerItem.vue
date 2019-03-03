@@ -12,7 +12,7 @@
             <fitty-p :text="display_username" ref="fitty"></fitty-p>
           </div>
         </div>
-        <div class="player-score">
+        <div class="player-score" v-if="show_score">
           <div class="rank" :class="playerRankClass"></div>
           <div class="score">
             <svg xmlns="http://www.w3.org/2000/svg" width="3vw" height="3vw" viewBox="0 0 30 30">
@@ -64,7 +64,15 @@ export default {
     playerRankClass() {
       return "rank-" + this.player.rank;
     },
+    show_score() {
+      return this.config.hide_score != "true";
+    },
     isDisplayMyName() {
+      if (this.config.hide_other_players == "true") {
+        if (_.startsWith(this.player.id, "RemotePlayer")) {
+          return false;
+        }
+      }
       return this.isDisplayNames && this.player.is_online;
     },
     display_username() {
