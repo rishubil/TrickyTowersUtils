@@ -15,27 +15,14 @@
         <div class="player-score" v-if="show_score">
           <div class="rank" :class="playerRankClass"></div>
           <div class="score">
-            <svg xmlns="http://www.w3.org/2000/svg" width="3vw" height="3vw" viewBox="0 0 30 30">
-              <defs>
-                <linearGradient
-                  id="g1"
-                  x1="0"
-                  x2="0"
-                  y1="0"
-                  y2="100%"
-                  gradientUnits="userSpaceOnUse"
-                >
-                  <stop stop-color="#ffe2e2" offset="0%"></stop>
-                  <stop stop-color="#d1d0ff" offset="100%"></stop>
-                </linearGradient>
-              </defs>
-              <text
-                class="svg-score-text"
-                x="1"
-                y="20"
-                fill="url(#g1)"
-              >{{ this.player.total_score }}</text>
-            </svg>
+            <gradient-text
+              height="3vw"
+              width="10vw"
+              textWidth="100"
+              startColor="#ffe2e2"
+              endColor="#d1d0ff"
+              :text="current_score"
+            ></gradient-text>
           </div>
         </div>
       </div>
@@ -46,6 +33,7 @@
 <script>
 import _ from "lodash";
 import FittyP from "/components/FittyP.vue";
+import GradientText from "/components/GradientText.vue";
 
 export default {
   name: "PlayerItem",
@@ -55,7 +43,8 @@ export default {
     config: Object
   },
   components: {
-    FittyP
+    FittyP,
+    GradientText
   },
   data() {
     return {};
@@ -66,6 +55,9 @@ export default {
     },
     show_score() {
       return this.config.hide_score != "true";
+    },
+    current_score() {
+      return _.toString(this.player.total_score);
     },
     isDisplayMyName() {
       if (this.config.hide_other_players == "true") {
@@ -152,6 +144,7 @@ export default {
 .rank {
   width: 2.8vw;
   height: 3.2vw;
+  padding-bottom: 0.5vw;
   display: inline-block;
   background-size: contain;
   background-repeat: no-repeat;
@@ -176,18 +169,9 @@ export default {
 .score {
   display: inline-block;
   margin-left: -0.5vw;
+  width: 3vw;
+  overflow-x: hidden;
 }
-
-.svg-score-text {
-  font-family: "Noto Sans", sans-serif;
-  font-weight: 700;
-  font-size: 15px;
-  stroke-linejoin: round;
-  stroke: #1a0f1f;
-  stroke-width: 4px;
-  paint-order: stroke;
-}
-
 @-webkit-keyframes bigPulse {
   from {
     -webkit-transform: scale3d(1, 1, 1);
