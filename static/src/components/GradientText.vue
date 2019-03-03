@@ -1,7 +1,14 @@
 <template>
   <svg xmlns="http://www.w3.org/2000/svg" :viewBox="viewBox" class="gradient-text">
     <defs>
-      <linearGradient id="g1" x1="0" x2="0" y1="0" y2="100%" gradientUnits="userSpaceOnUse">
+      <linearGradient
+        :id="'g' + _uid"
+        x1="0"
+        x2="0"
+        y1="0"
+        y2="100%"
+        gradientUnits="userSpaceOnUse"
+      >
         <stop :stop-color="startColor" offset="0%"></stop>
         <stop :stop-color="endColor" offset="100%"></stop>
       </linearGradient>
@@ -12,7 +19,7 @@
       y="50%"
       dominant-baseline="middle"
       :text-anchor="textAnchor"
-      fill="url(#g1)"
+      :fill="'url(#g' + _uid + ')'"
     >{{ text }}</text>
   </svg>
 </template>
@@ -21,7 +28,7 @@
 export default {
   name: "GradientText",
   props: {
-    text: String,
+    text: [String, Number],
     startColor: String,
     endColor: String,
     textWidth: [String, Number],
