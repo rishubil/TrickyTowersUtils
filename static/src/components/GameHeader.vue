@@ -5,7 +5,7 @@
     leave-active-class="animated fadeOut"
   >
     <div class="game-info" v-if="display_goal">
-      <div class="level special"></div>
+      <div class="level" :class="level_class"></div>
       <div class="target">
         <div class="title">
           <gradient-text
@@ -57,6 +57,17 @@ export default {
   computed: {
     display_goal() {
       return this.config.hide_goal != "true" && this.inPlaying;
+    },
+    level_class() {
+      const gameMode = this.gameInfo.game_mode;
+      if (_.endsWith(gameMode, "_EASY")) {
+        return "easy";
+      } else if (_.endsWith(gameMode, "_NORMAL")) {
+        return "normal";
+      } else if (_.endsWith(gameMode, "_PRO")) {
+        return "special";
+      }
+      return "";
     }
   }
 };
