@@ -6,7 +6,7 @@
       leave-active-class="animated slideOutUp"
       :after-leave="requestRemoveFitty"
     >
-      <div v-if="isDisplayMyName">
+      <div class="player-info" v-if="isDisplayMyName">
         <div class="player-name-box" :class="{ highlight: shouldHighlight }">
           <div class="name" :data-steamid="this.player.steam_id">
             <fitty-p :text="display_username" ref="fitty"></fitty-p>
@@ -93,15 +93,17 @@ export default {
 <style scoped>
 .player {
   width: 16.3vw;
-  height: 4.5vw;
   position: absolute;
   top: -1px;
   display: none;
 }
 
+.player-info {
+  height: 6.7vw;
+}
+
 .player-name-box {
   width: 100%;
-  height: 100%;
   position: absolute;
   background-image: url(/assets/img/nametag.png);
   background-size: contain;

@@ -131,7 +131,6 @@ export default {
   top: 0;
   left: 0;
   width: 100vw;
-  height: 4.5vw;
   -webkit-animation-duration: 1s;
   animation-duration: 1s;
   -webkit-animation-fill-mode: both;
