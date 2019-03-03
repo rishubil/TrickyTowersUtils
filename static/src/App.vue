@@ -3,12 +3,14 @@
     <div id="overlayContainer">
       <img class="bg" src="/assets/img/test4.jpg">
       <player-header :players="gamedata.players" :gameInfo="gamedata.game_info" :config="config"></player-header>
+      <game-header :gameInfo="gamedata.game_info" :config="config"></game-header>
     </div>
   </div>
 </template>
 
 <script>
 import PlayerHeader from "/components/PlayerHeader.vue";
+import GameHeader from "/components/GameHeader.vue";
 import createToast from "/js/utils.js";
 import _ from "lodash";
 import io from "socket.io-client";
@@ -16,7 +18,8 @@ import io from "socket.io-client";
 export default {
   name: "App",
   components: {
-    PlayerHeader
+    PlayerHeader,
+    GameHeader
   },
   data() {
     return {
