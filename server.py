@@ -4,6 +4,9 @@
 from gevent import monkey
 monkey.patch_all()
 
+from io_utils import set_unbufferd
+set_unbufferd()
+
 from flask import Flask, render_template, jsonify
 from flask_socketio import SocketIO, emit
 from json import dumps

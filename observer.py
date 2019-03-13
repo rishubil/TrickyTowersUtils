@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from io_utils import set_unbufferd
+set_unbufferd()
+
 from socketIO_client import SocketIO
 from socketIO_client.exceptions import ConnectionError
 from config import Config, CONFIG_FILE

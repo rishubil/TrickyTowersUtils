@@ -3,7 +3,7 @@
 
 from time import time
 import models
-from utils import follow_module_ptr, MemoryFollowError
+from memory_utils import follow_module_ptr, MemoryFollowError
 import json
 import os
 

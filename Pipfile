@@ -24,5 +24,7 @@ python_version = "3.7"
 [scripts]
 server = "python server.py"
 observer = "python observer.py"
+gui = "python gui.py"
 build-observer= "pyinstaller -F observer.py"
 build-server= "pyinstaller -F server.py --add-data \"static;static\" --hidden-import=\"engineio.async_drivers.gevent\""
+build-gui= "pyinstaller -F -w gui.py"
