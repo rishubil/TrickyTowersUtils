@@ -65,6 +65,12 @@ export default {
           return false;
         }
       }
+      const hideConfigKey = "hide_" + this.player.steam_id;
+      if (_.has(this.config, hideConfigKey)) {
+        if (this.config[hideConfigKey]) {
+          return false;
+        }
+      }
       return this.isDisplayNames && this.player.is_online;
     },
     display_username() {
