@@ -83,7 +83,7 @@ build.bat
 Overlay(Front-end):
 
 ```
-yarn watch
+pipenv run web
 ```
 
 Server:
