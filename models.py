@@ -1559,6 +1559,43 @@ class StateMachine(BaseModel):
     def attrs(cls):
         return super().attrs() + ['_state']
 
+class StateMachineFlowController(BaseModel):
+    '''
+    142e3228 : StateFlowController
+        fields
+            8 : _currentStateController (type: AbstractStateController)
+            c : _stateControllers (type: System.Collections.Generic.Dictionary<System.String,AbstractStateController>)
+    142e4eb0 : StateMachineFlowController
+        fields
+            10 : _stateMachine (type: StateMachine)
+    '''
+
+    def __init__(self, pm, ptr):
+        super().__init__(pm, ptr)
+        if not self.is_initialized():
+            self._stateMachine = None
+            self._currentStateController = None
+            return
+        self._currentStateController = AbstractStateController(pm, pm.read_int(ptr + 0x8))
+        self._stateMachine = StateMachine(pm, pm.read_int(ptr + 0x10))
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + ['_currentStateController', '_stateMachine']
+
+class AbstractStateController(BaseModel):
+    '''
+    142e30e0 : AbstractStateController
+        fields
+            8 : _stateFlowController (type: StateFlowController)
+    '''
+    def __init__(self, pm, ptr):
+        super().__init__(pm, ptr)
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs()
+
 class AbstractGameController(BaseModel):
     '''
     135423d0 : StateFlowController
@@ -1702,7 +1739,7 @@ class AbstractGameTypeController(BaseModel):
         return super().attrs() + ['_winningControllers']
 
 
-class GameStateController(BaseModel):
+class GameStateController(AbstractStateController):
     '''
     1716d758 : AbstractStateController
         fields

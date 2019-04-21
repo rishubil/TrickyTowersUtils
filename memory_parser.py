@@ -35,13 +35,13 @@ def parse_is_finished(pm, useful_data):
         useful_data['temp']['is_finished_faild'] = True
 
 
-def get_game_state_controller(pm):
+def get_state_machine_flow_controller(pm):
     try:
-        ptr = follow_module_ptr(pm, 'mono.dll', 0x1F6964, 0x3A0, 0x6A8, 0xC,
-                                0x14, 0x28, 0x0)
-        return models.GameStateController(pm, ptr)
+        ptr = follow_module_ptr(pm, 'mono.dll', 0x1F6964, 0x58, 0x134, 0x14,
+                                0x28, 0x0)
+        return models.StateMachineFlowController(pm, ptr)
     except (MemoryFollowError, AttributeError) as e:
-        print(f'[!] Cannot get GameStateController = {e}')
+        print(f'[!] Cannot get StateMachineFlowController = {e}')
         return None
 
 
@@ -64,8 +64,39 @@ def get_game_info_popup(pm):
         return None
 
 
+def parse_state_machine_flow_controller(pm, useful_data):
+    state_machine_flow_controller = get_state_machine_flow_controller(pm)
+    # dump_obj(state_machine_flow_controller, 'state_machine_flow_controller')
+
+    try:
+        useful_data['global'][
+            'state'] = state_machine_flow_controller._stateMachine._state.value
+    except (TypeError, AttributeError):
+        pass
+    finally:
+        if 'state' not in useful_data['global']:
+            print(f'[?] global.state is not defined')
+            useful_data['global']['state'] = None
+
+    try:
+        useful_data['temp'][
+            'global_controller'] = state_machine_flow_controller._currentStateController
+    except (TypeError, AttributeError):
+        pass
+    finally:
+        if 'global_controller' not in useful_data['temp']:
+            print(f'[?] temp.global_controller is not defined')
+            useful_data['temp']['global_controller'] = None
+
+
 def parse_game_state_controller(pm, useful_data):
-    game_state_controller = get_game_state_controller(pm)
+    if (useful_data['global']['state'] != 'GAME'):
+        useful_data['game_info']['game_mode'] = None
+        useful_data['game_info']['game_type'] = None
+        useful_data['temp']['game_type_flow'] = None
+        return
+    game_state_controller = models.GameStateController(
+        pm, useful_data['temp']['global_controller'].ptr)
     # dump_obj(game_state_controller, 'game_state_controller')
 
     if useful_data['temp']['is_finished_faild']:
@@ -130,6 +161,8 @@ def parse_game_info_popup(pm, useful_data):
 
 
 def parse_net_player_startups(useful_data, net_player_startups):
+    if (useful_data['global']['state'] != 'GAME'):
+        return
     if net_player_startups is None:
         print(f'[?] players is not defined')
         return
@@ -186,6 +219,8 @@ def parse_net_player_startups(useful_data, net_player_startups):
 
 
 def parse_results_by_player(useful_data, results_by_player):
+    if (useful_data['global']['state'] != 'GAME'):
+        return
     results_by_player_dict = results_by_player.serialize()
     for player in useful_data['players']:
         if not player['id'] in results_by_player_dict:
@@ -198,10 +233,11 @@ def parse_results_by_player(useful_data, results_by_player):
 
 def parse(pm):
     print(f'\n--- Parse at {int(time() * 1000)} ---')
-    useful_data = {'game_info': {}, 'players': [], 'temp': {}}
+    useful_data = {'global': {}, 'game_info': {}, 'players': [], 'temp': {}}
 
     parse_is_playing(pm, useful_data)
     parse_is_finished(pm, useful_data)
+    parse_state_machine_flow_controller(pm, useful_data)
     parse_game_state_controller(pm, useful_data)
     parse_user_manager(pm, useful_data)
     parse_game_info_popup(pm, useful_data)
