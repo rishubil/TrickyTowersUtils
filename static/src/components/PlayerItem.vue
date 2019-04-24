@@ -176,7 +176,7 @@ export default {
   display: inline-block;
   margin-left: -0.5vw;
   width: 3vw;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 @-webkit-keyframes bigPulse {
   from {
