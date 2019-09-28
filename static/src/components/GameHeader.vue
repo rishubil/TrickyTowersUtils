@@ -6,7 +6,7 @@
   >
     <div class="game-info" v-if="display_goal">
       <div class="level" :class="level_class"></div>
-      <div class="target">
+      <div class="target" v-if="display_target">
         <div class="title">
           <gradient-text
             height="2vw"
@@ -57,6 +57,9 @@ export default {
   computed: {
     display_goal() {
       return this.config.hide_goal != "true" && this.inPlaying;
+    },
+    display_target() {
+      return this.display_goal && this.gameInfo.cup_type != "QUICK_MATCH";
     },
     level_class() {
       const gameMode = this.gameInfo.game_mode;

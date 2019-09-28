@@ -39,6 +39,7 @@ export default {
   name: "PlayerItem",
   props: {
     player: Object,
+    cupType: String,
     isDisplayNames: Boolean,
     config: Object
   },
@@ -54,7 +55,7 @@ export default {
       return "rank-" + this.player.rank;
     },
     show_score() {
-      return this.config.hide_score != "true";
+      return this.config.hide_score != "true" && this.cupType != "QUICK_MATCH";
     },
     current_score() {
       return _.toString(this.player.total_score);

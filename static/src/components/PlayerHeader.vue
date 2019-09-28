@@ -4,6 +4,7 @@
       v-for="player in filteredPlayers"
       :key="player.id"
       :player="player"
+      :cupType="gameInfo.cup_type"
       :isDisplayNames="inPlaying"
       :config="config"
     ></player-item>
