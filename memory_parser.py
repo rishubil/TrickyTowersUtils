@@ -37,30 +37,11 @@ def parse_is_finished(pm, useful_data):
 
 def get_state_machine_flow_controller(pm):
     try:
-        ptr = follow_module_ptr(pm, 'mono.dll', 0x1F6964, 0x58, 0x134, 0x14,
-                                0x28, 0x0)
+        ptr = follow_module_ptr(pm, 'TrickyTowers.exe', 0x01049610, 0x8C, 0x30,
+                                0xC4, 0x4, 0x10, 0x18C, 0x0)
         return models.StateMachineFlowController(pm, ptr)
     except (MemoryFollowError, AttributeError) as e:
         print(f'[!] Cannot get StateMachineFlowController = {e}')
-        return None
-
-
-def get_user_manager(pm):
-    try:
-        ptr = follow_module_ptr(pm, 'mono.dll', 0x1F40AC, 0x1B4, 0x0)
-        return models.UserManager(pm, ptr)
-    except (MemoryFollowError, AttributeError) as e:
-        print(f'[!] Cannot get UserManager = {e}')
-        return None
-
-
-def get_game_info_popup(pm):
-    try:
-        ptr = follow_module_ptr(pm, 'mono.dll', 0x1F40AC, 0x1B4, 0x10, 0x2C,
-                                0x48, 0x20, 0xAC, 0x0)
-        return models.GameInfoPopup(pm, ptr)
-    except (MemoryFollowError, AttributeError) as e:
-        print(f'[!] Cannot get GameInfoPopup = {e}')
         return None
 
 
@@ -94,6 +75,7 @@ def parse_game_state_controller(pm, useful_data):
         useful_data['game_info']['game_mode'] = None
         useful_data['game_info']['game_type'] = None
         useful_data['temp']['game_type_flow'] = None
+        useful_data['temp']['game_type_controller'] = None
         return
     game_state_controller = models.GameStateController(
         pm, useful_data['temp']['global_controller'].ptr)
@@ -142,22 +124,15 @@ def parse_game_state_controller(pm, useful_data):
         if 'game_type_flow' not in useful_data['temp']:
             useful_data['temp']['game_type_flow'] = None
 
-
-def parse_user_manager(pm, useful_data):
-    # Not used
-    # user_manager = get_user_manager(pm)
-    # dump_obj(user_manager, 'user_manager')
-    pass
-
-
-def parse_game_info_popup(pm, useful_data):
-    game_info_popup = get_game_info_popup(pm)
-    # dump_obj(game_info_popup, 'game_info_popup')
-
-    if game_info_popup is None:
-        # print(f'[?] game_info_popup(temp) is not defined')
+    try:
+        game_type_controller = game_state_controller._gameTypeController
+        # dump_obj(game_type_controller, 'game_type_controller')
+        useful_data['temp']['game_type_controller'] = game_type_controller
+    except (TypeError, AttributeError):
         pass
-    useful_data['temp']['game_info_popup'] = game_info_popup
+    finally:
+        if 'game_type_controller' not in useful_data['temp']:
+            useful_data['temp']['game_type_controller'] = None
 
 
 def parse_net_player_startups(useful_data, net_player_startups):
@@ -239,18 +214,17 @@ def parse(pm):
     parse_is_finished(pm, useful_data)
     parse_state_machine_flow_controller(pm, useful_data)
     parse_game_state_controller(pm, useful_data)
-    parse_user_manager(pm, useful_data)
-    parse_game_info_popup(pm, useful_data)
 
     game_type_flow = useful_data['temp']['game_type_flow']
-    game_info_popup = useful_data['temp']['game_info_popup']
+    game_type_controller = useful_data['temp']['game_type_controller']
 
     # get cup type
     cup_type = None
     try:
         if isinstance(game_type_flow, models.CupMatchFlowController):
             cup_type = game_type_flow._cupType.value
-        elif isinstance(game_info_popup, models.GameInfoPopup):
+        elif isinstance(game_type_controller,
+                        models.OnlineMultiplayerGameTypeController):
             cup_type = 'QUICK_MATCH'
     except (TypeError, AttributeError):
         pass
@@ -264,7 +238,8 @@ def parse(pm):
         if cup_type is None:
             print(f'[?] players is not defined')
         elif cup_type == 'QUICK_MATCH':
-            parse_net_player_startups(useful_data, game_info_popup._netPlayers)
+            parse_net_player_startups(
+                useful_data, game_type_controller._gameInfoPopup._netPlayers)
         else:
             parse_net_player_startups(useful_data,
                                       game_type_flow._netPlayersStartup)

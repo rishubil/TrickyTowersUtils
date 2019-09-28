@@ -1739,6 +1739,95 @@ class AbstractGameTypeController(BaseModel):
         return super().attrs() + ['_winningControllers']
 
 
+class OnlineMultiplayerGameTypeController(AbstractGameTypeController):
+    '''
+    1716f180 : AbstractGameTypeController
+        static fields
+            0 : CONTROLLER_IDS (type: System.Collections.Generic.List<System.String>)
+        fields
+            8 : gameFinish (type: System.Action<System.String[],System.Single[]>)
+            c : gameQuit (type: System.Action<System.String>)
+            10 : retry (type: System.Action)
+            14 : next (type: System.Action)
+            18 : cont (type: System.Action)
+            1c : _inputs (type: System.String[])
+            20 : _gameSetup (type: GameSetupData)
+            24 : _gameMode (type: AbstractGameMode)
+            28 : _gameTypeFlow (type: AbstractGameTypeFlowController)
+            2c : _gameControllers (type: System.Collections.Generic.Dictionary<System.String,AbstractGameController>)
+            30 : _finishedGameControllers (type: System.Collections.Generic.List<AbstractGameController>)
+            60 : _finishGame (type: System.Boolean)
+            34 : _winningControllers (type: AbstractGameController[])
+            38 : _winningControllerIds (type: System.String[])
+            3c : _towerValues (type: System.Single[])
+            40 : _gameControllersToEnd (type: System.Collections.Generic.List<System.String>)
+            44 : _pauseMenu (type: PauseMenu)
+            48 : _worldObjectSpawner (type: AbstractWorldObjectSpawner)
+            4c : _spellCaster (type: AbstractSpellCaster)
+            50 : _actionLayer (type: InputActionLayer)
+            61 : _pausable (type: System.Boolean)
+            54 : _fadeOutHandler (type: DG.Tweening.TweenCallback)
+            62 : _fadeOutComplete (type: System.Boolean)
+            58 : _fadeOutTween (type: DG.Tweening.Tweener)
+            5c : _gameOverlayActivated (type: Steamworks.Callback<Steamworks.GameOverlayActivated_t>)
+    12156d30 : OnlineMultiplayerGameTypeController
+        static fields
+        fields
+            64 : _wizardIds (type: System.Int32[])
+            68 : _brickPackIds (type: System.String[])
+            6c : _netPlayerGameControllers (type: System.Collections.Generic.Dictionary<NetPlayer,AbstractGameController>)
+            70 : _gameControllerNetPlayers (type: System.Collections.Generic.Dictionary<AbstractGameController,NetPlayer>)
+            74 : _gameModeSetupMessageHelper (type: NetworkWriterMessageHelper)
+            78 : _readyMessageHelper (type: NetworkMessageHelper<UnityEngine.Networking.NetworkSystem.ReadyMessage>)
+            7c : _gameStateMessageHelper (type: ServerClientNetworkMessageHelper<PlayerStringFloatMessage,TimestampedPlayerStringFloatMessage>)
+            80 : _gameBaskStateMessageHelper (type: NetworkMessageHelper<BaskStateDataMessage>)
+            84 : _gameEndMessageHelper (type: NetworkMessageHelper<PlayerFloatMessage>)
+            88 : _gameWonMessageHelper (type: NetworkMessageHelper<GameWonMessage>)
+            8c : _gameStateAtTimeMessageHelper (type: ServerClientNetworkMessageHelper<FloatMessage,PlayerStringFloatMessage>)
+            90 : _audioMessageHelper (type: NetworkMessageHelper<AudioEffectMessage>)
+            94 : _gameStatesAtTime (type: System.Collections.Generic.Dictionary<System.Single,System.Collections.Generic.Dictionary<AbstractGameController,System.String>>)
+            98 : _dataModelSyncers (type: System.Collections.Generic.List<AbstractNetworkGameDataModelSyncer>)
+            9c : _finishedTimer (type: Timer)
+            a0 : _confirmPopup (type: ConfirmPopup)
+            a4 : _networkErrorPopup (type: MessagePopup)
+            a8 : _migrationPopup (type: HostMigrationPopup)
+            ac : _gameInfoPopup (type: BasePopup)
+            b0 : _gameInfoButtonPopup (type: GameInfoButtonPopup)
+            b4 : _levelUpdatePopup (type: LevelUpdatePopup)
+            d8 : _initialized (type: System.Boolean)
+            d9 : _setupCompleted (type: System.Boolean)
+            da : _allGameControllersReady (type: System.Boolean)
+            db : _startGameCalled (type: System.Boolean)
+            dc : _gamePlaying (type: System.Boolean)
+            e0 : _lastPlayerStatusChangedCheck (type: System.Single)
+            e4 : _firstPlayerStatusChangedCheck (type: System.Single)
+            e8 : _readyMessageSent (type: System.Boolean)
+            e9 : _gameWon (type: System.Boolean)
+            ea : _gameWonMessageSent (type: System.Boolean)
+            eb : _removeNetworkObjectsOnCleanup (type: System.Boolean)
+            b8 : _setupConnections (type: System.Collections.Generic.List<UnityEngine.Networking.NetworkConnection>)
+            bc : _gamePlayStats (type: GamePlayStats)
+            c0 : _countDownEffects (type: System.Collections.Generic.List<CountDownEffect>)
+            c4 : _gameModeModel (type: GameModeModel)
+            c8 : _gameControllerEloScores (type: System.Collections.Generic.Dictionary<AbstractGameController,System.Int32>)
+            ec : _eloScoreUpdated (type: System.Boolean)
+            f0 : _inviteMode (type: GameSetupData.InviteMode)
+            f4 : _hostMigrationStartedAt (type: System.Single)
+            cc : _lastSentLocalGameStateRequestMessage (type: System.Collections.Generic.Dictionary<NetPlayer,TimestampedPlayerStringFloatMessage>)
+            d0 : _netplayersAtStartup (type: System.Collections.Generic.List<NetPlayerAtStartup>)
+            d4 : _effectRunner (type: EffectRunner)
+    '''
+
+    def __init__(self, pm, ptr):
+        super().__init__(pm, ptr)
+        if not self.is_initialized():
+            self._gameInfoPopup = None
+        self._gameInfoPopup = GameInfoPopup(pm, pm.read_int(ptr + 0xac))
+
+    @classmethod
+    def attrs(cls):
+        return super().attrs() + ['_gameInfoPopup']
+
 class GameStateController(AbstractStateController):
     '''
     1716d758 : AbstractStateController
@@ -1776,7 +1865,10 @@ class GameStateController(AbstractStateController):
             self._gameTypeController = None
             return
         self._gameSetup = GameSetupData(pm, pm.read_int(ptr + 0x24))
-        self._gameTypeController = AbstractGameTypeController(pm, pm.read_int(ptr + 0x20))
+        if (self._gameSetup.gameType.is_online_multiplayer()):
+            self._gameTypeController = OnlineMultiplayerGameTypeController(pm, pm.read_int(ptr + 0x20))
+        else:
+            self._gameTypeController = AbstractGameTypeController(pm, pm.read_int(ptr + 0x20))
 
     @classmethod
     def attrs(cls):

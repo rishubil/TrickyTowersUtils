@@ -59,8 +59,9 @@ class ConfigUpdateHandler(PatternMatchingEventHandler):
                  ignore_patterns=None,
                  ignore_directories=False,
                  case_sensitive=False):
-        super(ConfigUpdateHandler, self).__init__(
-            patterns, ignore_patterns, ignore_directories, case_sensitive)
+        super(ConfigUpdateHandler,
+              self).__init__(patterns, ignore_patterns, ignore_directories,
+                             case_sensitive)
         self.prev_st_mtime = 0
 
     def on_modified(self, event):
