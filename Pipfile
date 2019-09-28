@@ -4,19 +4,19 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-pylint = "*"
-yapf = "*"
-pyinstaller = "*"
+pylint = "~=2.4.1"
+yapf = "~=0.28.0"
+pyinstaller = "~=3.5"
 
 [packages]
-pymem = "*"
-pywin32 = "*"
-flask = "*"
-flask-socketio = "*"
-gevent = "*"
-socketio-client = "*"
-chardet = "*"
-watchdog = "*"
+pymem = "~=1.0"
+pywin32 = "==224"
+flask = "~=1.0.2"
+flask-socketio = "~=3.3.2"
+gevent = "~=1.4.0"
+socketio-client = "~=0.7.2"
+chardet = "~=3.0.4"
+watchdog = "~=0.9.0"
 
 [requires]
 python_version = "3.7"
