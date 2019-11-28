@@ -68,7 +68,7 @@ export default {
       }
       const hideConfigKey = "hide_" + this.player.steam_id;
       if (_.has(this.config, hideConfigKey)) {
-        if (this.config[hideConfigKey]) {
+        if (this.config[hideConfigKey] == "true") {
           return false;
         }
       }
