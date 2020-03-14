@@ -98,6 +98,6 @@ Observer:
 pipenv run observer
 ```
 
-## 5. License
+## 6. License
 
 MIT
