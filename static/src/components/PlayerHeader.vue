@@ -56,7 +56,7 @@ export default {
         this.players,
         player => _.indexOf(this.playerFilter, player.id) == -1
       );
-      const scores = _.reverse(_.map(vps, "total_score").sort());
+      const scores = _.map(vps, "total_score").sort((a, b) => b - a);
       return _.map(vps, player => {
         player.rank = _.indexOf(scores, player.total_score) + 1;
         return player;
